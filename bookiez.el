@@ -79,6 +79,8 @@
 (defvar bookiez-books nil)
 
 (defun bookiez-add-book (author title isbn date thumbnail)
+  (unless bookiez-books
+    (bookiez-read-database))
   (let ((do-insert t))
     (loop for book in bookiez-books
 	  when (or (equal isbn (nth 2 book))
@@ -101,7 +103,8 @@
     (while (not (eobp))
       (push (split-string (buffer-substring (point) (line-end-position))
 			  "\t")
-	    bookiez-books))
+	    bookiez-books)
+      (forward-line 1))
     (setq bookiez-books (nreverse bookiez-books))))
 
 (defun bookiez-write-database ()
