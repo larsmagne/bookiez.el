@@ -183,12 +183,16 @@
     (bury-buffer)))
 
 (defun bookiez-display-cover (thumbnail)
-  (forward-line 1)
-  (insert "\n")
-  (forward-line -1)
-  (url-retrieve thumbnail 'bookiez-image-fetched
-		(list (current-buffer) (point))
-		t t))
+  (save-excursion
+    (forward-line 1)
+    (if (looking-at "\\*")
+	;; Delete previously-inserted image.
+	(delete-region (point) (line-end-position))
+      (insert "\n")
+      (forward-line -1))
+    (url-retrieve thumbnail 'bookiez-image-fetched
+		  (list (current-buffer) (point))
+		  t t)))
 
 (defvar bookiez-mode-map
   (let ((map (make-sparse-keymap)))
