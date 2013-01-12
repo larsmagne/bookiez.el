@@ -187,12 +187,12 @@
     (forward-line 1)
     (if (looking-at "\\*")
 	;; Delete previously-inserted image.
-	(delete-region (point) (line-end-position))
+	(delete-region (point) (progn (forward-line 1) (point)))
       (insert "\n")
-      (forward-line -1))
-    (url-retrieve thumbnail 'bookiez-image-fetched
-		  (list (current-buffer) (point))
-		  t t)))
+      (forward-line -1)
+      (url-retrieve thumbnail 'bookiez-image-fetched
+		    (list (current-buffer) (point))
+		    t t))))
 
 (defvar bookiez-mode-map
   (let ((map (make-sparse-keymap)))
