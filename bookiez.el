@@ -56,19 +56,19 @@
       (insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
       (when thumbnail
 	(url-retrieve thumbnail 'bookiez-image-fetched
-		      (list (current-buffer))
+		      (list (current-buffer) (point))
 		      t t))
       (bookiez-add-book author title isbn date thumbnail))))
 
-(defun bookiez-image-fetched (status buffer)
+(defun bookiez-image-fetched (status buffer point)
   (goto-char (point-min))
   (when (or (search-forward "\n\n" nil t)
 	    (search-forward "\r\n\r\n" nil t))
     (let ((image (buffer-substring (point) (point-max))))
       (with-current-buffer buffer
-	(goto-char (point-max))
-	(insert-image (create-image image nil t) "*")
-	(goto-char (point-min))))))
+	(save-excursion
+	  (goto-char point)
+	  (insert-image (create-image image nil t) "*"))))))
 
 (defun bookiez-start-server ()
   (setq server-use-tcp t
@@ -116,4 +116,95 @@
 			 "\t")
 	      "\n"))))
 
+(defun bookiez ()
+  "List the books in the bookiez database."
+  (interactive)
+  (unless bookiez-books
+    (bookiez-read-database))
+  (pop-to-buffer "*Bookiez*")
+  (erase-buffer)
+  (bookiez-mode)
+  (bookiez-display-authors))
+
+(defun bookiez-display-authors (&optional focus)
+  (setq bookiez-mode 'author)
+  (erase-buffer)
+  (let ((authors nil)
+	start)
+    (dolist (book bookiez-books)
+      (unless (member (car book) authors)
+	(push (car book) authors)))
+    (setq authors (sort authors 'string<))
+    (dolist (author authors)
+      (when (and focus
+		 (equal focus author))
+	(setq focus (point)))
+      (setq start (point))
+      (insert author "\n")
+      (put-text-property start (1+ start) 'bookiez-thing author))
+    (goto-char (or focus (point-min)))))
+
+(defun bookiez-choose ()
+  "Choose the author or book under point."
+  (interactive)
+  (let ((thing (get-text-property (line-beginning-position) 'bookiez-thing)))
+    (when thing
+      (cond
+       ((eq bookiez-mode 'author)
+	(bookiez-display-books thing))
+       ((eq bookiez-mode 'book)
+	(bookiez-display-cover thing))))))
+
+(defun bookiez-display-books (author)
+  (setq bookiez-mode 'book)
+  (erase-buffer)
+  (insert author "\n\n")
+  (let ((books nil)
+	start)
+    (dolist (book bookiez-books)
+      (when (equal author (car book))
+	(push book books)))
+    (setq books (sort books (lambda (b1 b2)
+			      (string< (nth 3 b1) (nth 3 b2)))))
+    (dolist (book books)
+      (setq start (point))
+      (insert (nth 3 book) " " (nth 1 book) "\n")
+      (put-text-property start (1+ start) 'bookiez-thing (nth 5 book))))
+  (goto-char (point-min))
+  (forward-line 2))
+
+(defun bookiez-quit ()
+  (interactive)
+  (if (eq bookiez-mode 'book)
+      (progn
+	(goto-char (point-min))
+	(bookiez-display-authors
+	 (buffer-substring (point) (line-end-position))))
+    (bury-buffer)))
+
+(defun bookiez-display-cover (thumbnail)
+  (forward-line 1)
+  (insert "\n")
+  (forward-line -1)
+  (url-retrieve thumbnail 'bookiez-image-fetched
+		(list (current-buffer) (point))
+		t t))
+
+(defvar bookiez-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\r" 'bookiez-choose)
+    (define-key map "q" 'bookiez-quit)
+    map))
+
+(defun bookiez-mode ()
+  "Mode for bookiez mode buffers.
+
+\\{bookiez-mode-map}"
+  (interactive)
+  (setq major-mode 'bookiez-mode)
+  (setq mode-name "Bookiez")
+  (set (make-local-variable 'bookiez-mode) 'author)
+  (use-local-map bookiez-mode-map)
+  (setq truncate-lines t))
+  
 (provide 'bookiez)
