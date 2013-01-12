@@ -21,6 +21,9 @@
 ;; (bookiez-display-isbn "1931520003")
 
 (require 'json)
+(require 'cl)
+
+(defvar bookiez-file "~/.emacs.d/bookiez.data")
 
 (defun bookiez-lookup-isbn (isbn)
   (let ((buffer (url-retrieve-synchronously
@@ -44,7 +47,7 @@
 				       (cdr (assq 'imageLinks volume)))))))))
     (list title author date thumbnail)))
 
-(defun bookiez-display-isbn (isbn)
+(defun bookiez-display-isbn (isbn &optional save)
   (destructuring-bind (title author date thumbnail) (bookiez-lookup-isbn isbn)
     (if (not title)
 	(message "No match for %s" isbn)
@@ -54,7 +57,8 @@
       (when thumbnail
 	(url-retrieve thumbnail 'bookiez-image-fetched
 		      (list (current-buffer))
-		      t t)))))
+		      t t))
+      (bookiez-add-book author title isbn date thumbnail))))
 
 (defun bookiez-image-fetched (status buffer)
   (goto-char (point-min))
@@ -65,3 +69,48 @@
 	(goto-char (point-max))
 	(insert-image (create-image image nil t) "*")
 	(goto-char (point-min))))))
+
+(defun bookiez-start-server ()
+  (setq server-use-tcp t
+	server-host (system-name)
+	server-name "bookiez")
+  (server-start))
+
+(defvar bookiez-books nil)
+
+(defun bookiez-add-book (author title isbn date thumbnail)
+  (let ((do-insert t))
+    (loop for book in bookiez-books
+	  when (or (equal isbn (nth 2 book))
+		   (and (equal author (car book))
+			(equal title (cadr book))))
+	  do (message "%s/%s (%s) already exists in the database"
+		      author title isbn)
+	  (setq do-insert nil))
+    (when do-insert
+      (push (list author title isbn date
+		  (format-time-string "%Y-%m-%d")
+		  thumbnail)
+	    bookiez-books)
+      (bookiez-write-database))))
+
+(defun bookiez-read-database ()
+  (setq bookiez-books nil)
+  (with-temp-buffer
+    (insert-file-contents bookiez-file)
+    (while (not (eobp))
+      (push (split-string (buffer-substring (point) (line-end-position))
+			  "\t")
+	    bookiez-books))
+    (setq bookiez-books (nreverse bookiez-books))))
+
+(defun bookiez-write-database ()
+  (with-temp-file bookiez-file
+    (dolist (book bookiez-books)
+      (insert (mapconcat (lambda (elem)
+			   (subst-char-in-string ?\t ?  elem))
+			 book
+			 "\t")
+	      "\n"))))
+
+(provide 'bookiez)
