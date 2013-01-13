@@ -4,12 +4,10 @@
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: books
 
-;; This file is not part of GNU Emacs.
-
-;; dae.el is free software; you can redistribute it and/or modify it
-;; under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 2, or (at your option)
-;; any later version.
+;; bookiez.el is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published
+;; by the Free Software Foundation; either version 2, or (at your
+;; option) any later version.
 
 ;;; Commentary:
 
@@ -34,7 +32,8 @@
       (with-current-buffer buffer
 	(goto-char (point-min))
 	(when (search-forward "\n\n" nil t)
-	  (let* ((data (aref (cdr (assq 'items (json-read))) 0))
+	  (let* ((main-data (cdr (assq 'items (json-read))))
+		 (data (and main-data (aref main-data 0)))
 		 (volume (assq 'volumeInfo data)))
 	    (setq title (cdr (assq 'title volume)))
 	    (when (assq 'subtitle volume)
@@ -44,7 +43,8 @@
 				    ", "))
 	    (setq date (cdr (assq 'publishedDate volume))
 		  thumbnail (cdr (assq 'thumbnail
-				       (cdr (assq 'imageLinks volume)))))))))
+				       (cdr (assq 'imageLinks volume)))))))
+	(kill-buffer (current-buffer))))
     (list title author date thumbnail)))
 
 (defun bookiez-display-isbn (isbn &optional save)
