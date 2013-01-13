@@ -23,7 +23,10 @@
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
 
-(defun bookiez-lookup-isbn (isbn)
+(defvar bookiez-isbndb-key nil
+  "To use the isbndb lookup, get a developer key.")
+
+(defun bookiez-lookup-isbn-google (isbn)
   (let ((buffer (url-retrieve-synchronously
 		 (format "https://www.googleapis.com/books/v1/volumes?q=ISBN%s"
 			 isbn)))
@@ -45,7 +48,31 @@
 		  thumbnail (cdr (assq 'thumbnail
 				       (cdr (assq 'imageLinks volume)))))))
 	(kill-buffer (current-buffer))))
-    (list title author date thumbnail)))
+    (and title
+	 (list title author date thumbnail))))
+
+(defun bookiez-lookup-isbn-isbndb (isbn)
+  (let ((buffer (url-retrieve-synchronously
+		 (format "http://isbndb.com/api/books.xml?access_key=%s&index1=isbn&value1=%s"
+			 bookiez-isbndb-key
+			 isbn)))
+	title author thumbnail date)
+    (when buffer
+      (with-current-buffer buffer
+	(goto-char (point-min))
+	(when (search-forward "\n\n" nil t)
+	  (let* ((data (libxml-parse-xml-region (point) (point-max)))
+		 (entry (assq 'BookData (assq 'BookList (cdr data)))))
+	    (list (nth 2 (assq 'Title entry))
+		  (nth 2 (assq 'AuthorsText entry))
+		  nil
+		  nil)))))))
+
+(defun bookiez-lookup-isbn (isbn)
+  (or (bookiez-lookup-isbn-google isbn)
+      (and bookiez-isbndb-key
+	   (bookiez-lookup-isbn-isbndb isbn))
+      (list nil nil nil nil)))
 
 (defun bookiez-display-isbn (isbn &optional save)
   (destructuring-bind (title author date thumbnail) (bookiez-lookup-isbn isbn)
@@ -54,7 +81,7 @@
 	  (message "No match for %s" isbn)
 	  (start-process
 	   "*mpg*" nil "mpg123"
-	   "-n" "10" "/music/repository/Various/Ringtones/42-Lary 7 - Waveforms 1-8 .mp3"))
+	   "-n" "10" "/music/repository/Various/Ringtones/45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3"))
       (pop-to-buffer "*isbn*")
       (erase-buffer)
       (insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
