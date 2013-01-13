@@ -26,6 +26,9 @@
 (defvar bookiez-isbndb-key nil
   "To use the isbndb lookup, get a developer key.")
 
+(defvar bookiez-librarything-key nil
+  "To use the LibraryThing covers, get a developer key.")
+
 (defun bookiez-lookup-isbn-google (isbn)
   (let ((buffer (url-retrieve-synchronously
 		 (format "https://www.googleapis.com/books/v1/volumes?q=ISBN%s"
@@ -87,6 +90,11 @@
 	   (bookiez-lookup-isbn-isbndb isbn))
       (list nil nil nil nil)))
 
+(defun bookiez-thumbnail (thumbnail isbn)
+  (or thumbnail
+      (format "http://covers.librarything.com/devkey/%s/medium/isbn/%s"
+	      bookiez-librarything-key isbn)))
+
 (defun bookiez-display-isbn (isbn &optional save)
   (destructuring-bind (title author date thumbnail) (bookiez-lookup-isbn isbn)
     (if (not title)
@@ -98,10 +106,10 @@
       (pop-to-buffer "*isbn*")
       (erase-buffer)
       (insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
-      (when thumbnail
-	(url-retrieve thumbnail 'bookiez-image-fetched
-		      (list (current-buffer) (point))
-		      t t))
+      (url-retrieve (bookiez-thumbnail thumbnail isbn)
+		    'bookiez-image-fetched
+		    (list (current-buffer) (point))
+		    t t)
       (start-process
        "*mpg*" nil "mpg123"
        "-n" "10" "/music/repository/Various/Ringtones/61-KREVmorse .mp3")
@@ -216,7 +224,8 @@
     (dolist (book books)
       (setq start (point))
       (insert (nth 3 book) " " (nth 1 book) "\n")
-      (put-text-property start (1+ start) 'bookiez-thing (nth 5 book))))
+      (put-text-property start (1+ start) 'bookiez-thing
+			 (bookiez-thumbnail (nth 5 book) (nth 2 book)))))
   (goto-char (point-min))
   (forward-line 2))
 
@@ -237,7 +246,8 @@
 	(delete-region (point) (progn (forward-line 1) (point)))
       (insert "\n")
       (forward-line -1)
-      (url-retrieve thumbnail 'bookiez-image-fetched
+      (url-retrieve thumbnail
+		    'bookiez-image-fetched
 		    (list (current-buffer) (point))
 		    t t))))
 
