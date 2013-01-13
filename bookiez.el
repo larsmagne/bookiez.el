@@ -66,12 +66,12 @@
 	(when (search-forward "\n\n" nil t)
 	  (let* ((data (libxml-parse-xml-region (point) (point-max)))
 		 (entry (assq 'BookData (assq 'BookList (cdr data)))))
-	    (setq a data)
-	    (list (nth 2 (assq 'Title entry))
-		  (bookiez-isbndb-author (nth 2 (assq 'AuthorsText entry)))
-		  (bookiez-isbndb-date
-		   (cdr (assq 'edition_info (cadr (assq 'Details entry)))))
-		  nil)))))))
+	    (and (nth 2 (assq 'Title entry))
+		 (list (nth 2 (assq 'Title entry))
+		       (bookiez-isbndb-author (nth 2 (assq 'AuthorsText entry)))
+		       (bookiez-isbndb-date
+			(cdr (assq 'edition_info (cadr (assq 'Details entry)))))
+		       nil))))))))
 
 (defun bookiez-isbndb-date (string)
   ;; The edition info looks like "Paperback; 1986-11-01".
@@ -113,11 +113,31 @@
     (and title
 	 (list title author date thumbnail))))
 
+(defun bookiez-lookup-isbn-librarything (isbn)
+  (let ((buffer (url-retrieve-synchronously
+		 (format "http://www.librarything.com/services/rest/1.1/?method=librarything.ck.getwork&isbn=%s&apikey=%s"
+			 isbn
+			 bookiez-librarything-key)))
+	title author thumbnail date)
+    (when buffer
+      (with-current-buffer buffer
+	(goto-char (point-min))
+	(when (search-forward "\n\n" nil t)
+	  (let* ((data (libxml-parse-xml-region (point) (point-max)))
+		 (entry (assq 'item (assq 'ltml (cdr data)))))
+	    (and (nth 2 (assq 'title entry))
+		 (list (nth 2 (assq 'title entry))
+		       (nth 2 (assq 'author entry))
+		       "1970-01-01"
+		       nil))))))))
+
 (defun bookiez-lookup-isbn (isbn)
   (or (bookiez-lookup-isbn-google isbn)
       (bookiez-lookup-isbn-openlibrary isbn)
       (and bookiez-isbndb-key
 	   (bookiez-lookup-isbn-isbndb isbn))
+      (and bookiez-librarything-key
+	   (bookiez-lookup-isbn-librarything isbn))
       (list nil nil nil nil)))
 
 (defun bookiez-thumbnail (thumbnail isbn)
