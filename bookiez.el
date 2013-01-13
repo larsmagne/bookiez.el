@@ -148,6 +148,11 @@
 	      bookiez-librarything-key isbn)))
 
 (defun bookiez-display-isbn (isbn &optional save)
+  ;; If we have an EAN that contains the ISBN, then chop off the EAN
+  ;; stuff and recompute the ISBN.
+  (when (and (= (length isbn) 13)
+	     (not (string-match "^978" isbn))) ; ISBN-13
+    (setq isbn (bookiez-compute-isbn (substring isbn 3 12))))
   (destructuring-bind (title author date thumbnail) (bookiez-lookup-isbn isbn)
     (if (not title)
 	(progn
