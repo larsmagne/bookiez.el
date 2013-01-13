@@ -53,7 +53,7 @@
 
 (defun bookiez-lookup-isbn-isbndb (isbn)
   (let ((buffer (url-retrieve-synchronously
-		 (format "http://isbndb.com/api/books.xml?access_key=%s&index1=isbn&value1=%s"
+		 (format "http://isbndb.com/api/books.xml?access_key=%s&results=details&index1=isbn&value1=%s"
 			 bookiez-isbndb-key
 			 isbn)))
 	title author thumbnail date)
@@ -63,10 +63,22 @@
 	(when (search-forward "\n\n" nil t)
 	  (let* ((data (libxml-parse-xml-region (point) (point-max)))
 		 (entry (assq 'BookData (assq 'BookList (cdr data)))))
+	    (setq a data)
 	    (list (nth 2 (assq 'Title entry))
-		  (nth 2 (assq 'AuthorsText entry))
-		  nil
+		  (bookiez-isbndb-author (nth 2 (assq 'AuthorsText entry)))
+		  (bookiez-isbndb-date
+		   (cdr (assq 'edition_info (cadr (assq 'Details entry)))))
 		  nil)))))))
+
+(defun bookiez-isbndb-date (string)
+  (when (and string
+	     (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]" string))
+    (match-string 0 string)))
+
+(defun bookiez-isbndb-author (string)
+  (when string
+    (setq string (replace-regexp-in-string ", $" "" string)))
+  string)
 
 (defun bookiez-lookup-isbn (isbn)
   (or (bookiez-lookup-isbn-google isbn)
