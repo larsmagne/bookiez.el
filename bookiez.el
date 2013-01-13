@@ -71,6 +71,7 @@
 		  nil)))))))
 
 (defun bookiez-isbndb-date (string)
+  ;; The edition info looks like "Paperback; 1986-11-01".
   (when (and string
 	     (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]" string))
     (match-string 0 string)))
