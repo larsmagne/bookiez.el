@@ -84,15 +84,45 @@
     (setq string (replace-regexp-in-string ", $" "" string)))
   string)
 
+(defun bookiez-lookup-isbn-openlibrary (isbn)
+  (let ((buffer (url-retrieve-synchronously
+		 (format "http://openlibrary.org/api/books?bibkeys=ISBN:%s&format=json&jscmd=data"
+			 isbn)))
+	title author thumbnail date)
+    (when buffer
+      (with-current-buffer buffer
+	(goto-char (point-min))
+	(when (search-forward "\n\n" nil t)
+	  (let* ((data (cdar (json-read))))
+	    (setq title (cdr (assq 'title data)))
+	    (setq author (mapconcat
+			  (lambda (elem)
+			    (cdr (assq 'name elem)))
+			  (cdr (assq 'authors data))
+			  ", "))
+	    (setq date (format-time-string
+			"%Y-%m-%d"
+			(apply 'encode-time
+			       (mapcar
+				(lambda (elem)
+				  (or elem 0))
+				(parse-time-string (cdr (assq 'publish_date data))))))
+		  thumbnail (cdr (assq 'large
+				       (cdr (assq 'cover data)))))))
+	(kill-buffer (current-buffer))))
+    (and title
+	 (list title author date thumbnail))))
+
 (defun bookiez-lookup-isbn (isbn)
   (or (bookiez-lookup-isbn-google isbn)
+      (bookiez-lookup-isbn-openlibrary isbn)
       (and bookiez-isbndb-key
 	   (bookiez-lookup-isbn-isbndb isbn))
       (list nil nil nil nil)))
 
 (defun bookiez-thumbnail (thumbnail isbn)
   (or thumbnail
-      (format "http://covers.librarything.com/devkey/%s/medium/isbn/%s"
+      (format "http://covers.librarything.com/devkey/%s/large/isbn/%s"
 	      bookiez-librarything-key isbn)))
 
 (defun bookiez-display-isbn (isbn &optional save)
@@ -230,6 +260,7 @@
   (forward-line 2))
 
 (defun bookiez-quit ()
+  "Pop to the previous level."
   (interactive)
   (if (eq bookiez-mode 'book)
       (progn
