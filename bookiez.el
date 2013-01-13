@@ -50,7 +50,11 @@
 (defun bookiez-display-isbn (isbn &optional save)
   (destructuring-bind (title author date thumbnail) (bookiez-lookup-isbn isbn)
     (if (not title)
-	(message "No match for %s" isbn)
+	(progn
+	  (message "No match for %s" isbn)
+	  (start-process
+	   "*mpg*" nil "mpg123"
+	   "-n" "10" "/music/repository/Various/Ringtones/42-Lary 7 - Waveforms 1-8 .mp3"))
       (pop-to-buffer "*isbn*")
       (erase-buffer)
       (insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
@@ -58,6 +62,9 @@
 	(url-retrieve thumbnail 'bookiez-image-fetched
 		      (list (current-buffer) (point))
 		      t t))
+      (start-process
+       "*mpg*" nil "mpg123"
+       "-n" "10" "/music/repository/Various/Ringtones/61-KREVmorse .mp3")
       (bookiez-add-book author title isbn date thumbnail))))
 
 (defun bookiez-image-fetched (status buffer point)
