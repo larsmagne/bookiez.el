@@ -93,23 +93,24 @@
       (with-current-buffer buffer
 	(goto-char (point-min))
 	(when (search-forward "\n\n" nil t)
-	  (let* ((data (cdar (json-read))))
-	    (setq title (cdr (assq 'title data)))
-	    (setq author (mapconcat
-			  (lambda (elem)
-			    (cdr (assq 'name elem)))
-			  (cdr (assq 'authors data))
-			  ", "))
-	    (setq date (format-time-string
-			"%Y-%m-%d"
-			(apply 'encode-time
-			       (mapcar
-				(lambda (elem)
-				  (or elem 0))
-				(parse-time-string
-				 (cdr (assq 'publish_date data))))))
-		  thumbnail (cdr (assq 'large
-				       (cdr (assq 'cover data)))))))
+	  (let ((data (cdar (json-read))))
+	    (when data
+	      (setq title (cdr (assq 'title data)))
+	      (setq author (mapconcat
+			    (lambda (elem)
+			      (cdr (assq 'name elem)))
+			    (cdr (assq 'authors data))
+			    ", "))
+	      (setq date (format-time-string
+			  "%Y-%m-%d"
+			  (apply 'encode-time
+				 (mapcar
+				  (lambda (elem)
+				    (or elem 0))
+				  (parse-time-string
+				   (cdr (assq 'publish_date data))))))
+		    thumbnail (cdr (assq 'large
+					 (cdr (assq 'cover data))))))))
 	(kill-buffer (current-buffer))))
     (and title
 	 (list title author date thumbnail))))
@@ -319,5 +320,17 @@
   (set (make-local-variable 'bookiez-mode) 'author)
   (use-local-map bookiez-mode-map)
   (setq truncate-lines t))
-  
+
+(defun bookiez-compute-isbn (string)
+  (let ((checksum
+	 (- 11
+	    (mod
+	     (loop for i from 10 downto 2
+		   for char across string
+		   summing (* (- char ?0) i))
+	     11))))
+    (concat string (if (= checksum 10)
+		       "X"
+		     (char-to-string (+ ?0 checksum))))))
+
 (provide 'bookiez)
