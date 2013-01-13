@@ -106,7 +106,8 @@
 			       (mapcar
 				(lambda (elem)
 				  (or elem 0))
-				(parse-time-string (cdr (assq 'publish_date data))))))
+				(parse-time-string
+				 (cdr (assq 'publish_date data))))))
 		  thumbnail (cdr (assq 'large
 				       (cdr (assq 'cover data)))))))
 	(kill-buffer (current-buffer))))
