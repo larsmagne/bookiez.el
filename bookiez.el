@@ -20,127 +20,9 @@
 
 (require 'json)
 (require 'cl)
+(require 'isbn)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
-
-(defvar bookiez-isbndb-key nil
-  "To use the isbndb lookup, get a developer key.")
-
-(defvar bookiez-librarything-key nil
-  "To use the LibraryThing covers, get a developer key.")
-
-(defun bookiez-lookup-isbn-google (isbn)
-  (let ((buffer (url-retrieve-synchronously
-		 (format "https://www.googleapis.com/books/v1/volumes?q=ISBN%s"
-			 isbn)))
-	title author thumbnail date)
-    (when buffer
-      (with-current-buffer buffer
-	(goto-char (point-min))
-	(when (search-forward "\n\n" nil t)
-	  (let* ((main-data (cdr (assq 'items (json-read))))
-		 (data (and main-data (aref main-data 0)))
-		 (volume (assq 'volumeInfo data)))
-	    (setq title (cdr (assq 'title volume)))
-	    (when (assq 'subtitle volume)
-	      (setq title (concat title " ("
-				  (cdr (assq 'subtitle volume)) ")")))
-	    (setq author (mapconcat 'identity (cdr (assq 'authors volume))
-				    ", "))
-	    (setq date (cdr (assq 'publishedDate volume))
-		  thumbnail (cdr (assq 'thumbnail
-				       (cdr (assq 'imageLinks volume)))))))
-	(kill-buffer (current-buffer))))
-    (and title
-	 (list title author date thumbnail))))
-
-(defun bookiez-lookup-isbn-isbndb (isbn)
-  (let ((buffer (url-retrieve-synchronously
-		 (format "http://isbndb.com/api/books.xml?access_key=%s&results=details&index1=isbn&value1=%s"
-			 bookiez-isbndb-key
-			 isbn)))
-	title author thumbnail date)
-    (when buffer
-      (with-current-buffer buffer
-	(goto-char (point-min))
-	(when (search-forward "\n\n" nil t)
-	  (let* ((data (libxml-parse-xml-region (point) (point-max)))
-		 (entry (assq 'BookData (assq 'BookList (cdr data)))))
-	    (and (nth 2 (assq 'Title entry))
-		 (list (nth 2 (assq 'Title entry))
-		       (bookiez-isbndb-author (nth 2 (assq 'AuthorsText entry)))
-		       (bookiez-isbndb-date
-			(cdr (assq 'edition_info (cadr (assq 'Details entry)))))
-		       nil))))))))
-
-(defun bookiez-isbndb-date (string)
-  ;; The edition info looks like "Paperback; 1986-11-01".
-  (when (and string
-	     (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]" string))
-    (match-string 0 string)))
-
-(defun bookiez-isbndb-author (string)
-  (when string
-    (setq string (replace-regexp-in-string ", $" "" string)))
-  string)
-
-(defun bookiez-lookup-isbn-openlibrary (isbn)
-  (let ((buffer (url-retrieve-synchronously
-		 (format "http://openlibrary.org/api/books?bibkeys=ISBN:%s&format=json&jscmd=data"
-			 isbn)))
-	title author thumbnail date)
-    (when buffer
-      (with-current-buffer buffer
-	(goto-char (point-min))
-	(when (search-forward "\n\n" nil t)
-	  (let ((data (cdar (json-read))))
-	    (when data
-	      (setq title (cdr (assq 'title data)))
-	      (setq author (mapconcat
-			    (lambda (elem)
-			      (cdr (assq 'name elem)))
-			    (cdr (assq 'authors data))
-			    ", "))
-	      (setq date (format-time-string
-			  "%Y-%m-%d"
-			  (apply 'encode-time
-				 (mapcar
-				  (lambda (elem)
-				    (or elem 0))
-				  (parse-time-string
-				   (cdr (assq 'publish_date data))))))
-		    thumbnail (cdr (assq 'large
-					 (cdr (assq 'cover data))))))))
-	(kill-buffer (current-buffer))))
-    (and title
-	 (list title author date thumbnail))))
-
-(defun bookiez-lookup-isbn-librarything (isbn)
-  (let ((buffer (url-retrieve-synchronously
-		 (format "http://www.librarything.com/services/rest/1.1/?method=librarything.ck.getwork&isbn=%s&apikey=%s"
-			 isbn
-			 bookiez-librarything-key)))
-	title author thumbnail date)
-    (when buffer
-      (with-current-buffer buffer
-	(goto-char (point-min))
-	(when (search-forward "\n\n" nil t)
-	  (let* ((data (libxml-parse-xml-region (point) (point-max)))
-		 (entry (assq 'item (assq 'ltml (cdr data)))))
-	    (and (nth 2 (assq 'title entry))
-		 (list (nth 2 (assq 'title entry))
-		       (nth 2 (assq 'author entry))
-		       "1970-01-01"
-		       nil))))))))
-
-(defun bookiez-lookup-isbn (isbn)
-  (or (bookiez-lookup-isbn-google isbn)
-      (bookiez-lookup-isbn-openlibrary isbn)
-      (and bookiez-isbndb-key
-	   (bookiez-lookup-isbn-isbndb isbn))
-      (and bookiez-librarything-key
-	   (bookiez-lookup-isbn-librarything isbn))
-      (list nil nil nil nil)))
 
 (defun bookiez-thumbnail (thumbnail isbn)
   (or thumbnail
@@ -153,7 +35,7 @@
   (when (and (= (length isbn) 13)
 	     (not (string-match "^978" isbn))) ; ISBN-13
     (setq isbn (bookiez-compute-isbn (substring isbn 3 12))))
-  (destructuring-bind (title author date thumbnail) (bookiez-lookup-isbn isbn)
+  (destructuring-bind (title author date thumbnail) (isbn-lookup isbn)
     (if (not title)
 	(progn
 	  (message "No match for %s" isbn)
