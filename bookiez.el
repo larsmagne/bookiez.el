@@ -23,6 +23,7 @@
 (require 'isbn)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
+(defvar bookiez-mode nil)
 
 (defun bookiez-thumbnail (thumbnail isbn)
   (or thumbnail

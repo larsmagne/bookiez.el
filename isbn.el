@@ -140,7 +140,7 @@
       (and isbn-isbndb-key
 	   (isbn-lookup-isbndb isbn))
       (and isbn-librarything-key
-	   (isbn-isbn-librarything isbn))
+	   (isbn-lookup-librarything isbn))
       (list nil nil nil nil)))
 
 (provide 'isbn)
