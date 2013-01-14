@@ -13,7 +13,7 @@
 
 ;; isbn.el is a library for looking up ISBNs via various sources.
 ;; Currently supported are Google Books, LibraryThing, isbndb and
-;; OpenLibrary/
+;; OpenLibrary.
 
 ;; Usage:
 ;; (isbn-lookup "1931520003")
