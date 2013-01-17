@@ -52,7 +52,7 @@
 		  thumbnail (cdr (assq 'thumbnail
 				       (cdr (assq 'imageLinks volume)))))))
 	(kill-buffer (current-buffer))))
-    (and title
+    (and title author
 	 (list title author date thumbnail))))
 
 (defun isbn-lookup-isbndb (isbn)
@@ -97,11 +97,12 @@
 	  (let ((data (cdar (json-read))))
 	    (when data
 	      (setq title (cdr (assq 'title data)))
-	      (setq author (mapconcat
-			    (lambda (elem)
-			      (cdr (assq 'name elem)))
-			    (cdr (assq 'authors data))
-			    ", "))
+	      (when (cdr (assq 'authors data))
+		(setq author (mapconcat
+			      (lambda (elem)
+				(cdr (assq 'name elem)))
+			      (cdr (assq 'authors data))
+			      ", ")))
 	      (setq date (format-time-string
 			  "%Y-%m-%d"
 			  (apply 'encode-time
@@ -113,7 +114,7 @@
 		    thumbnail (cdr (assq 'large
 					 (cdr (assq 'cover data))))))))
 	(kill-buffer (current-buffer))))
-    (and title
+    (and title author
 	 (list title author date thumbnail))))
 
 (defun isbn-lookup-librarything (isbn)
