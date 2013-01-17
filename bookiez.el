@@ -30,13 +30,20 @@
       (format "http://covers.librarything.com/devkey/%s/large/isbn/%s"
 	      bookiez-librarything-key isbn)))
 
+(setq bookiez-last-isbn nil)
+
 (defun bookiez-display-isbn (isbn &optional save)
+  (start-process
+   "*mpg*" nil "mpg123"
+   "-n" "10" "/music/repository/Various/Ringtones/71-On the Beach .mp3")
   ;; If we have an EAN that contains the ISBN, then chop off the EAN
   ;; stuff and recompute the ISBN.
   (when (and (= (length isbn) 13)
 	     (not (string-match "^978" isbn))) ; ISBN-13
     (setq isbn (bookiez-compute-isbn (substring isbn 3 12))))
+  (setq bookiez-last-isbn isbn)
   (destructuring-bind (title author date thumbnail) (isbn-lookup isbn)
+    (setq date (or date "1970-01-01"))
     (if (not title)
 	(progn
 	  (message "No match for %s" isbn)
@@ -54,6 +61,14 @@
        "*mpg*" nil "mpg123"
        "-n" "10" "/music/repository/Various/Ringtones/61-KREVmorse .mp3")
       (bookiez-add-book author title isbn date thumbnail))))
+
+(defun bookiez-add-book-manually ()
+  (interactive)
+  (bookiez-add-book (read-string "Author: ")
+		    (read-string "Title: ")
+		    bookiez-last-isbn
+		    "1970-01-01"
+		    nil))
 
 (defun bookiez-image-fetched (status buffer point)
   (goto-char (point-min))
@@ -103,13 +118,14 @@
     (setq bookiez-books (nreverse bookiez-books))))
 
 (defun bookiez-write-database ()
-  (with-temp-file bookiez-file
-    (dolist (book bookiez-books)
-      (insert (mapconcat (lambda (elem)
-			   (subst-char-in-string ?\t ?  elem))
-			 book
-			 "\t")
-	      "\n"))))
+  (let ((coding-system-for-write 'utf-8))
+    (with-temp-file bookiez-file
+      (dolist (book bookiez-books)
+	(insert (mapconcat (lambda (elem)
+			     (subst-char-in-string ?\t ?  elem))
+			   book
+			   "\t")
+		"\n")))))
 
 (defun bookiez ()
   "List the books in the bookiez database."
