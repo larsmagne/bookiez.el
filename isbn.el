@@ -144,4 +144,16 @@
 	   (isbn-lookup-librarything isbn))
       (list nil nil nil nil)))
 
+(defun isbn-compute (string)
+  (let ((checksum
+	 (- 11
+	    (mod
+	     (loop for i from 10 downto 2
+		   for char across string
+		   summing (* (- char ?0) i))
+	     11))))
+    (concat string (if (= checksum 10)
+		       "X"
+		     (char-to-string (+ ?0 checksum))))))
+
 (provide 'isbn)

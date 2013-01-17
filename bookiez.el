@@ -40,7 +40,7 @@
   ;; stuff and recompute the ISBN.
   (when (and (= (length isbn) 13)
 	     (not (string-match "^978" isbn))) ; ISBN-13
-    (setq isbn (bookiez-compute-isbn (substring isbn 3 12))))
+    (setq isbn (isbn-compute (substring isbn 3 12))))
   (setq bookiez-last-isbn isbn)
   (destructuring-bind (title author date thumbnail) (isbn-lookup isbn)
     (setq date (or date "1970-01-01"))
@@ -224,17 +224,5 @@
   (set (make-local-variable 'bookiez-mode) 'author)
   (use-local-map bookiez-mode-map)
   (setq truncate-lines t))
-
-(defun bookiez-compute-isbn (string)
-  (let ((checksum
-	 (- 11
-	    (mod
-	     (loop for i from 10 downto 2
-		   for char across string
-		   summing (* (- char ?0) i))
-	     11))))
-    (concat string (if (= checksum 10)
-		       "X"
-		     (char-to-string (+ ?0 checksum))))))
 
 (provide 'bookiez)
