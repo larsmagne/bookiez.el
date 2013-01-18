@@ -28,7 +28,7 @@
 (defun bookiez-thumbnail (thumbnail isbn)
   (or thumbnail
       (format "http://covers.librarything.com/devkey/%s/large/isbn/%s"
-	      bookiez-librarything-key isbn)))
+	      isbn-librarything-key isbn)))
 
 (setq bookiez-last-isbn nil)
 
@@ -42,6 +42,16 @@
 	     (not (string-match "^978" isbn))) ; ISBN-13
     (setq isbn (isbn-compute (substring isbn 3 12))))
   (setq bookiez-last-isbn isbn)
+  (if (or (= (length isbn) 13)
+	  (and (= (length isbn) 10)
+	       (equal isbn (isbn-compute (substring isbn 0 9)))))
+      (bookiez-display-isbn-1 isbn save)
+    ;; If the ISBN is totally invalid, say so before querying.
+    (start-process
+     "*mpg*" nil "mpg123"
+     "-n" "10" "/music/repository/Various/Ringtones/74-kaffe matthews - still striped .mp3")))
+
+(defun bookiez-display-isbn-1 (isbn &optional save)
   (destructuring-bind (title author date thumbnail) (isbn-lookup isbn)
     (setq date (or date "1970-01-01"))
     (if (not title)
@@ -52,11 +62,13 @@
 	   "-n" "10" "/music/repository/Various/Ringtones/45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3"))
       (pop-to-buffer "*isbn*")
       (erase-buffer)
+      (bookiez-mode)
       (insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
       (url-retrieve (bookiez-thumbnail thumbnail isbn)
 		    'bookiez-image-fetched
 		    (list (current-buffer) (point))
 		    t t)
+      (setq bookiez-last-isbn nil)
       (start-process
        "*mpg*" nil "mpg123"
        "-n" "10" "/music/repository/Various/Ringtones/61-KREVmorse .mp3")
@@ -66,7 +78,7 @@
   (interactive)
   (bookiez-add-book (read-string "Author: ")
 		    (read-string "Title: ")
-		    bookiez-last-isbn
+		    (or bookiez-last-isbn (read-string "ISBN: "))
 		    "1970-01-01"
 		    nil))
 
@@ -130,6 +142,7 @@
 (defun bookiez ()
   "List the books in the bookiez database."
   (interactive)
+  (bookiez-start-server)
   (unless bookiez-books
     (bookiez-read-database))
   (pop-to-buffer "*Bookiez*")
@@ -212,6 +225,7 @@
   (let ((map (make-sparse-keymap)))
     (define-key map "\r" 'bookiez-choose)
     (define-key map "q" 'bookiez-quit)
+    (define-key map "a" 'bookiez-add-book-manually)
     map))
 
 (defun bookiez-mode ()
