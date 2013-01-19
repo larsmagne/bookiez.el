@@ -66,10 +66,13 @@
 	(goto-char (point-min))
 	(when (search-forward "\n\n" nil t)
 	  (let* ((data (libxml-parse-xml-region (point) (point-max)))
-		 (entry (assq 'BookData (assq 'BookList (cdr data)))))
+		 (entry (assq 'BookData (assq 'BookList (cdr data))))
+		 (author (isbn-isbndb-author
+			  (nth 2 (assq 'AuthorsText entry)))))
 	    (and (nth 2 (assq 'Title entry))
+		 author
 		 (list (nth 2 (assq 'Title entry))
-		       (isbn-isbndb-author (nth 2 (assq 'AuthorsText entry)))
+		       author
 		       (isbn-isbndb-date
 			(cdr (assq 'edition_info (cadr (assq 'Details entry)))))
 		       nil))))))))
@@ -130,6 +133,7 @@
 	  (let* ((data (libxml-parse-xml-region (point) (point-max)))
 		 (entry (assq 'item (assq 'ltml (cdr data)))))
 	    (and (nth 2 (assq 'title entry))
+		 (nth 2 (assq 'author entry))
 		 (list (nth 2 (assq 'title entry))
 		       (nth 2 (assq 'author entry))
 		       "1970-01-01"
@@ -137,7 +141,7 @@
 
 (defun isbn-lookup (isbn)
   (or (isbn-lookup-google isbn)
-      (isbn-lookup-openlibrary isbn)
+      (ignore-errors (isbn-lookup-openlibrary isbn))
       (and isbn-isbndb-key
 	   (isbn-lookup-isbndb isbn))
       (and isbn-librarything-key
@@ -152,8 +156,9 @@
 		   for char across string
 		   summing (* (- char ?0) i))
 	     11))))
-    (concat string (if (= checksum 10)
-		       "X"
-		     (char-to-string (+ ?0 checksum))))))
+    (concat string (cond
+		    ((= checksum 10) "X")
+		    ((= checksum 11) "0")
+		    (t (char-to-string (+ ?0 checksum)))))))
 
 (provide 'isbn)
