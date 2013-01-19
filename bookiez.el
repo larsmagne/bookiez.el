@@ -33,6 +33,7 @@
 (setq bookiez-last-isbn nil)
 
 (defun bookiez-display-isbn (isbn &optional save)
+  (message "Querying %s" isbn)
   (start-process
    "*mpg*" nil "mpg123"
    "-n" "10" "/music/repository/Various/Ringtones/71-On the Beach .mp3")
@@ -47,6 +48,7 @@
 	       (equal isbn (isbn-compute (substring isbn 0 9)))))
       (bookiez-display-isbn-1 isbn save)
     ;; If the ISBN is totally invalid, say so before querying.
+    (message "Invalid ISBN %s" isbn)
     (start-process
      "*mpg*" nil "mpg123"
      "-n" "10" "/music/repository/Various/Ringtones/74-kaffe matthews - still striped .mp3")))
@@ -60,7 +62,7 @@
 	  (start-process
 	   "*mpg*" nil "mpg123"
 	   "-n" "10" "/music/repository/Various/Ringtones/45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3"))
-      (pop-to-buffer "*isbn*")
+      (switch-to-buffer "*isbn*")
       (erase-buffer)
       (bookiez-mode)
       (insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
@@ -80,7 +82,8 @@
 		    (read-string "Title: ")
 		    (or bookiez-last-isbn (read-string "ISBN: "))
 		    "1970-01-01"
-		    nil))
+		    nil)
+  (setq bookiez-last-isbn nil))
 
 (defun bookiez-image-fetched (status buffer point)
   (goto-char (point-min))
