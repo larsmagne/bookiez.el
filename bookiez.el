@@ -69,7 +69,7 @@
       (url-retrieve (bookiez-thumbnail thumbnail isbn)
 		    'bookiez-image-fetched
 		    (list (current-buffer) (point))
-		    t t)
+		    t)
       (setq bookiez-last-isbn nil)
       (start-process
        "*mpg*" nil "mpg123"
@@ -127,9 +127,10 @@
 	    bookiez-books)
       (bookiez-write-database))
      (update-read
-      (setcdr (nthcdr 6 book) (delete "unread" (nthcdr 6 book)))
-      (nconc book (list (concat "read:"
-				(format-time-string "%Y-%m-%d"))))
+      (setcdr (nthcdr 5 update-read)
+	      (delete "unread" (nthcdr 5 update-read)))
+      (nconc update-read (list (concat "read:"
+				       (format-time-string "%Y-%m-%d"))))
       (bookiez-write-database)))))
 
 (defun bookiez-read-database ()
@@ -233,7 +234,7 @@
       (url-retrieve thumbnail
 		    'bookiez-image-fetched
 		    (list (current-buffer) (point))
-		    t t))))
+		    t))))
 
 (defvar bookiez-mode-map
   (let ((map (make-sparse-keymap)))
