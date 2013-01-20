@@ -106,20 +106,31 @@
 (defun bookiez-add-book (author title isbn date thumbnail)
   (unless bookiez-books
     (bookiez-read-database))
-  (let ((do-insert t))
+  (let ((do-insert t)
+	(update-read nil))
     (loop for book in bookiez-books
+	  for unread = (member "unread" (nthcdr 6 book))
 	  when (or (equal isbn (nth 2 book))
 		   (and (equal author (car book))
 			(equal title (cadr book))))
-	  do (message "%s/%s (%s) already exists in the database"
-		      author title isbn)
+	  do (message "%s/%s (%s) already exists in the database%s"
+		      author title isbn
+		      (if (setq update-read (and unread book))
+			  "; marking as read"
+			""))
 	  (setq do-insert nil))
-    (when do-insert
+    (cond
+     (do-insert
       (push (list author title isbn date
 		  (format-time-string "%Y-%m-%d")
 		  thumbnail)
 	    bookiez-books)
-      (bookiez-write-database))))
+      (bookiez-write-database))
+     (update-read
+      (setcdr (nthcdr 6 book) (delete "unread" (nthcdr 6 book)))
+      (nconc book (list (concat "read:"
+				(format-time-string "%Y-%m-%d"))))
+      (bookiez-write-database)))))
 
 (defun bookiez-read-database ()
   (setq bookiez-books nil)
