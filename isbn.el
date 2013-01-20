@@ -30,10 +30,16 @@
 (defvar isbn-librarything-key nil
   "To use the LibraryThing lookup, get a developer key.")
 
+(defvar isbn-google-key nil
+  "If you do a lot of requests, put your key here to avoid rate limiting.")
+
 (defun isbn-lookup-google (isbn)
   (let ((buffer (url-retrieve-synchronously
-		 (format "https://www.googleapis.com/books/v1/volumes?q=ISBN%s"
-			 isbn)))
+		 (format "https://www.googleapis.com/books/v1/volumes?q=ISBN%s%s"
+			 isbn
+			 (if isbn-google-key
+			     (format "&key=%s" isbn-google-key)
+			   ""))))
 	title author thumbnail date)
     (when buffer
       (with-current-buffer buffer
