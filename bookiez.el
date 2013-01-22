@@ -123,12 +123,13 @@
      (do-insert
       (push (list author title isbn date
 		  (format-time-string "%Y-%m-%d")
-		  thumbnail)
+		  thumbnail
+		  "unread")
 	    bookiez-books)
       (bookiez-write-database))
      (update-read
       (setcdr (nthcdr 5 update-read)
-	      (delete "unread" (nthcdr 5 update-read)))
+	      (delete "unread" (nthcdr 6 update-read)))
       (nconc update-read (list (concat "read:"
 				       (format-time-string "%Y-%m-%d"))))
       (bookiez-write-database)))))
@@ -241,7 +242,13 @@
     (define-key map "\r" 'bookiez-choose)
     (define-key map "q" 'bookiez-quit)
     (define-key map "a" 'bookiez-add-book-manually)
+    (define-key map "i" 'bookiez-add-isbn)
     map))
+
+(defun bookiez-add-isbn (isbn)
+  "Add ISBN to the database."
+  (interactive "sISBN: ")
+  (bookiez-display-isbn isbn t))
 
 (defun bookiez-mode ()
   "Mode for bookiez mode buffers.
