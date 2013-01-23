@@ -70,7 +70,9 @@
 
 (defun bookiez-play (file)
   (start-process
-   "*mpg*" nil "mpg123"
+   "*mpg*" nil
+   "mpg123-alsa"
+   "-a" "hw:1.0"
    "-n" "10"
    (expand-file-name file "/music/repository/Various/Ringtones")))
 
