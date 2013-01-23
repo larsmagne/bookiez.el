@@ -34,9 +34,7 @@
 
 (defun bookiez-display-isbn (isbn &optional save)
   (message "Querying %s" isbn)
-  (start-process
-   "*mpg*" nil "mpg123"
-   "-n" "10" "/music/repository/Various/Ringtones/71-On the Beach .mp3")
+  (bookiez-play "71-On the Beach .mp3")
   ;; If we have an EAN that contains the ISBN, then chop off the EAN
   ;; stuff and recompute the ISBN.
   (when (and (= (length isbn) 13)
@@ -49,9 +47,7 @@
       (bookiez-display-isbn-1 isbn save)
     ;; If the ISBN is totally invalid, say so before querying.
     (message "Invalid ISBN %s" isbn)
-    (start-process
-     "*mpg*" nil "mpg123"
-     "-n" "10" "/music/repository/Various/Ringtones/74-kaffe matthews - still striped .mp3")))
+    (bookiez-play "74-kaffe matthews - still striped .mp3")))
 
 (defun bookiez-display-isbn-1 (isbn &optional save)
   (destructuring-bind (title author date thumbnail) (isbn-lookup isbn)
@@ -59,9 +55,7 @@
     (if (not title)
 	(progn
 	  (message "No match for %s" isbn)
-	  (start-process
-	   "*mpg*" nil "mpg123"
-	   "-n" "10" "/music/repository/Various/Ringtones/45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3"))
+	  (bookiez-play "45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3"))
       (switch-to-buffer "*isbn*")
       (erase-buffer)
       (bookiez-mode)
@@ -71,10 +65,14 @@
 		    (list (current-buffer) (point))
 		    t)
       (setq bookiez-last-isbn nil)
-      (start-process
-       "*mpg*" nil "mpg123"
-       "-n" "10" "/music/repository/Various/Ringtones/61-KREVmorse .mp3")
+      (bookiez-play "61-KREVmorse .mp3")
       (bookiez-add-book author title isbn date thumbnail))))
+
+(defun bookiez-play (file)
+  (start-process
+   "*mpg*" nil "mpg123"
+   "-n" "10"
+   (expand-file-name file "/music/repository/Various/Ringtones")))
 
 (defun bookiez-add-book-manually ()
   (interactive)
