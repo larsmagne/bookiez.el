@@ -73,6 +73,7 @@
    "*mpg*" nil
    "mpg123-alsa"
    "-a" "hw:1.0"
+   "-f" "3000"
    "-n" "10"
    (expand-file-name file "/music/repository/Various/Ringtones")))
 
