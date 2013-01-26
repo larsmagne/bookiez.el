@@ -41,19 +41,26 @@
 (defun isbn-lookup (isbn)
   (let ((result (make-vector (length isbn-lookup-types) nil))
 	(index 0))
-    (setq a result)
     (dolist (type isbn-lookup-types)
-      (funcall (intern (format "isbn-lookup-%s" type))
-	       isbn result index)
+      (aset result index
+	    (cons (funcall (intern (format "isbn-lookup-%s" type))
+			   isbn result index)
+		  nil))
       (incf index))
-    (while (not (isbn-first-result result))
+    (while (and (not (isbn-first-result result))
+		(isbn-first-living-buffer result))
       (accept-process-output nil nil 100))
     (isbn-first-result result)))
 
 (defun isbn-first-result (result)
   (loop for elem across result
-	when elem
-	return elem))
+	when (cdr elem)
+	return (cdr elem)))
+
+(defun isbn-first-living-buffer (result)
+  (loop for elem across result
+	when (buffer-live-p (car elem))
+	return (car elem)))
 
 (defun isbn-compute (string)
   (let ((checksum
@@ -96,7 +103,8 @@
 	    thumbnail (cdr (assq 'thumbnail
 				 (cdr (assq 'imageLinks volume)))))
       (when (and title author)
-	(aset vector index (list title author date thumbnail)))))
+	(setcdr (aref vector index)
+		(list title author date thumbnail)))))
   (kill-buffer (current-buffer)))
 
 ;;; ISBNDB support
@@ -118,12 +126,12 @@
 		    (nth 2 (assq 'AuthorsText entry)))))
       (when (and (nth 2 (assq 'Title entry))
 		 author)
-	(aset vector index 
-	      (list (nth 2 (assq 'Title entry))
-		    author
-		    (isbn-isbndb-date
-		     (cdr (assq 'edition_info (cadr (assq 'Details entry)))))
-		    nil)))))
+	(setcdr (aref vector index )
+		(list (nth 2 (assq 'Title entry))
+		      author
+		      (isbn-isbndb-date
+		       (cdr (assq 'edition_info (cadr (assq 'Details entry)))))
+		      nil)))))
   (kill-buffer (current-buffer)))
 
 (defun isbn-isbndb-date (string)
@@ -170,7 +178,8 @@
 	      thumbnail (cdr (assq 'large
 				   (cdr (assq 'cover data)))))
 	(when (and title author)
-	  (aset vector index (list title author date thumbnail))))))
+	  (setcdr (aref vector index)
+		  (list title author date thumbnail))))))
   (kill-buffer (current-buffer)))
 
 ;;; LibraryThing API
@@ -190,11 +199,11 @@
 	   (entry (assq 'item (assq 'ltml (cdr data)))))
       (when (and (nth 2 (assq 'title entry))
 		 (nth 2 (assq 'author entry)))
-	(aset vector index
-	      (list (nth 2 (assq 'title entry))
-		    (nth 2 (assq 'author entry))
-		    "1970-01-01"
-		    nil)))))
+	(setcdr (aref vector index)
+		(list (nth 2 (assq 'title entry))
+		      (nth 2 (assq 'author entry))
+		      "1970-01-01"
+		      nil)))))
   (kill-buffer (current-buffer)))
 
 (provide 'isbn)
