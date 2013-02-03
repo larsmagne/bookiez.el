@@ -26,9 +26,11 @@
 (defvar bookiez-mode nil)
 
 (defun bookiez-thumbnail (thumbnail isbn)
-  (or thumbnail
-      (format "http://covers.librarything.com/devkey/%s/large/isbn/%s"
-	      isbn-librarything-key isbn)))
+  (if (and thumbnail
+	   (plusp (length thumbnail)))
+      thumbnail
+    (format "http://covers.librarything.com/devkey/%s/large/isbn/%s"
+	    isbn-librarything-key isbn)))
 
 (setq bookiez-last-isbn nil)
 
@@ -50,7 +52,8 @@
     (bookiez-play "74-kaffe matthews - still striped .mp3")))
 
 (defun bookiez-display-isbn-1 (isbn &optional save)
-  (destructuring-bind (title author date thumbnail) (isbn-lookup isbn)
+  (destructuring-bind (title author date thumbnail) (or (bookiez-lookup isbn)
+							(isbn-lookup isbn))
     (setq date (or date "1970-01-01"))
     (if (not title)
 	(progn
@@ -68,12 +71,18 @@
       (bookiez-play "61-KREVmorse .mp3")
       (bookiez-add-book author title isbn date thumbnail))))
 
+(defun bookiez-lookup (isbn)
+  (loop for elem in bookiez-books
+	when (equal isbn (nth 2 elem))
+	return (list (nth 1 elem) (nth 0 elem)
+		     (nth 3 elem) (nth 5 elem))))
+
 (defun bookiez-play (file)
   (start-process
    "*mpg*" nil
    "mpg123-alsa"
-   "-a" "hw:1.0"
-   "-f" "3000"
+   "-a" "hw:1"
+   "-f" "1000"
    "-n" "10"
    (expand-file-name file "/music/repository/Various/Ringtones")))
 
@@ -244,6 +253,7 @@
     (define-key map "q" 'bookiez-quit)
     (define-key map "a" 'bookiez-add-book-manually)
     (define-key map "i" 'bookiez-add-isbn)
+    (define-key map "r" 'bookiez-mark-as-read)
     map))
 
 (defun bookiez-add-isbn (isbn)
