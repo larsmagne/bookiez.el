@@ -13,7 +13,7 @@
 
 ;; isbn.el is a library for looking up ISBNs via various sources.
 ;; Currently supported are Google Books, LibraryThing, isbndb and
-;; OpenLibrary.
+;; OpenLibrary.  Some of the methods requires getting a developer key.
 
 ;; Usage:
 ;; (isbn-lookup "1931520003")
@@ -33,7 +33,11 @@
 (defvar isbn-google-key nil
   "If you do a lot of requests, put your key here to avoid rate limiting.")
 
-(defvar isbn-lookup-types '(google isbndb openlibrary librarything)
+(defvar isbn-lookup-types
+  `(google
+    ,@(if isbn-isbndb-key '(isbndb))
+    openlibrary
+    ,@(if isbn-librarything-key '(librarything)))
   "List of lookup engines to use, and the order to look up ISBNs in.")
 
 ;; General interface.
