@@ -53,7 +53,8 @@
 
 (defun bookiez-display-isbn-1 (isbn &optional save)
   (destructuring-bind (title author date thumbnail) (or (bookiez-lookup isbn)
-							(isbn-lookup isbn))
+							(isbn-lookup isbn)
+							'(nil nil nil nil))
     (setq date (or date "1970-01-01"))
     (if (not title)
 	(progn
