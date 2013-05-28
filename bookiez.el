@@ -16,7 +16,7 @@
 
 ;;; Code:
 
-;; (bookiez-display-isbn "1931520003")
+;; (bookiez-display-isbn "9780307596888")
 
 (require 'json)
 (require 'cl)
@@ -80,7 +80,7 @@
 
 (defun bookiez-play (file)
   (start-process
-   "*mpg*" nil
+   "*mpg*" (get-buffer-create "*mpg123*")
    "mpg123-alsa"
    "-a" "hw:1"
    "-f" "1000"
@@ -101,6 +101,7 @@
   (when (or (search-forward "\n\n" nil t)
 	    (search-forward "\r\n\r\n" nil t))
     (let ((image (buffer-substring (point) (point-max))))
+      (kill-buffer (current-buffer))
       (with-current-buffer buffer
 	(save-excursion
 	  (goto-char point)
