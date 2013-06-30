@@ -79,6 +79,7 @@
 		     (nth 3 elem) (nth 5 elem))))
 
 (defun bookiez-play (file)
+  (call-process "amixer" nil nil nil "-c" "1" "set" "Speaker" "100%")
   (start-process
    "*mpg*" (get-buffer-create "*mpg123*")
    "mpg123-alsa"
