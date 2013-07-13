@@ -88,7 +88,7 @@
 	   (if isbn-google-key
 	       (format "&key=%s" isbn-google-key)
 	     ""))
-   'isbn-parse-google (list vector index) t t))
+   'isbn-parse-google (list vector index) t))
 
 (defun isbn-parse-google (status vector index)
   (goto-char (point-min))
@@ -119,7 +119,7 @@
 	   isbn-isbndb-key
 	   isbn)
    'isbn-parse-isbndb
-   (list vector index) t t))
+   (list vector index) t))
 
 (defun isbn-parse-isbndb (status vector index)
   (goto-char (point-min))
@@ -156,7 +156,7 @@
    (format "http://openlibrary.org/api/books?bibkeys=ISBN:%s&format=json&jscmd=data"
 	   isbn)
    'isbn-parse-openlibrary
-   (list vector index) t t))
+   (list vector index) t))
 
 (defun isbn-parse-openlibrary (status vector index)
   (goto-char (point-min))
@@ -173,12 +173,13 @@
 			", ")))
 	(setq date (format-time-string
 		    "%Y-%m-%d"
-		    (apply 'encode-time
-			   (mapcar
-			    (lambda (elem)
-			      (or elem 0))
-			    (parse-time-string
-			     (cdr (assq 'publish_date data))))))
+		    (and (cdr (assq 'publish_date data))
+			 (apply 'encode-time
+				(mapcar
+				 (lambda (elem)
+				   (or elem 0))
+				 (parse-time-string
+				  (cdr (assq 'publish_date data)))))))
 	      thumbnail (cdr (assq 'large
 				   (cdr (assq 'cover data)))))
 	(when (and title author)
@@ -194,7 +195,7 @@
 	   isbn
 	   isbn-librarything-key)
    'isbn-parse-librarything
-   (list vector index) t t))
+   (list vector index) t))
 
 (defun isbn-parse-librarything (status vector index)
   (goto-char (point-min))
