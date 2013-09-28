@@ -18,7 +18,6 @@
 
 ;; (bookiez-display-isbn "9780307596888")
 
-(require 'json)
 (require 'cl)
 (require 'isbn)
 
