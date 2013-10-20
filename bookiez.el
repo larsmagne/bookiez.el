@@ -167,10 +167,11 @@
 			   "\t")
 		"\n")))))
 
-(defun bookiez ()
+(defun bookiez (&optional start-server)
   "List the books in the bookiez database."
   (interactive)
-  (bookiez-start-server)
+  (when start-server
+    (bookiez-start-server))
   (unless bookiez-books
     (bookiez-read-database))
   (pop-to-buffer "*Bookiez*")
@@ -207,6 +208,14 @@
        ((eq bookiez-mode 'book)
 	(bookiez-display-cover thing))))))
 
+(defun bookiez-mark-as-read ()
+  "Mark the book under point as read."
+  (interactive)
+  (let ((isbn (get-text-property (line-beginning-position) 'bookiez-isbn)))
+    (unless isbn
+      (error "No ISBN on the current line"))
+    (bookiez-display-isbn-1 isbn t)))
+
 (defun bookiez-display-books (author)
   (setq bookiez-mode 'book)
   (erase-buffer)
@@ -222,7 +231,8 @@
       (setq start (point))
       (insert (nth 3 book) " " (nth 1 book) "\n")
       (put-text-property start (1+ start) 'bookiez-thing
-			 (bookiez-thumbnail (nth 5 book) (nth 2 book)))))
+			 (bookiez-thumbnail (nth 5 book) (nth 2 book)))
+      (put-text-property start (1+ start) 'bookiez-isbn (nth 2 book))))
   (goto-char (point-min))
   (forward-line 2))
 
