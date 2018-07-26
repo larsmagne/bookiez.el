@@ -83,7 +83,7 @@
 
 (defun isbn-lookup-google (isbn vector index)
   (url-retrieve
-   (format "https://www.googleapis.com/books/v1/volumes?q=ISBN%s%s"
+   (format "https://www.googleapis.com/books/v1/volumes?q=%s%s"
 	   isbn
 	   (if isbn-google-key
 	       (format "&key=%s" isbn-google-key)
