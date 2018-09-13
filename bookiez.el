@@ -78,12 +78,12 @@
 		     (nth 3 elem) (nth 5 elem))))
 
 (defun bookiez-play (file)
-  (call-process "amixer" nil nil nil "-c" "1" "set" "Speaker" "100%")
+  (call-process "amixer" nil nil nil "-c" "0" "set" "Speaker" "100%")
   (start-process
    "*mpg*" (get-buffer-create "*mpg123*")
-   "mpg123-alsa"
-   "-a" "hw:1"
-   "-f" "1000"
+   "mpg123"
+   "-a" "hw:0"
+   ;;"-f" "1000"
    "-n" "10"
    (expand-file-name file "/music/repository/Various/Ringtones")))
 
