@@ -50,29 +50,29 @@
 	    (cons (funcall (intern (format "isbn-lookup-%s" type))
 			   isbn result index)
 		  nil))
-      (incf index))
+      (cl-incf index))
     (while (and (not (isbn-first-result result))
 		(isbn-first-living-buffer result))
       (accept-process-output nil nil 100))
     (isbn-first-result result)))
 
 (defun isbn-first-result (result)
-  (loop for elem across result
-	when (cdr elem)
-	return (cdr elem)))
+  (cl-loop for elem across result
+	   when (cdr elem)
+	   return (cdr elem)))
 
 (defun isbn-first-living-buffer (result)
-  (loop for elem across result
-	when (buffer-live-p (car elem))
-	return (car elem)))
+  (cl-loop for elem across result
+	   when (buffer-live-p (car elem))
+	   return (car elem)))
 
 (defun isbn-compute (string)
   (let ((checksum
 	 (- 11
 	    (mod
-	     (loop for i from 10 downto 2
-		   for char across string
-		   summing (* (- char ?0) i))
+	     (cl-loop for i from 10 downto 2
+		      for char across string
+		      summing (* (- char ?0) i))
 	     11))))
     (concat string (cond
 		    ((= checksum 10) "X")
