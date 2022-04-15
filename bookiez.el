@@ -51,9 +51,10 @@
     (bookiez-play "74-kaffe matthews - still striped .mp3")))
 
 (defun bookiez-display-isbn-1 (isbn &optional save)
-  (destructuring-bind (title author date thumbnail) (or (bookiez-lookup isbn)
-							(isbn-lookup isbn)
-							'(nil nil nil nil))
+  (cl-destructuring-bind (title author date thumbnail)
+      (or (bookiez-lookup isbn)
+	  (isbn-lookup isbn)
+	  '(nil nil nil nil))
     (setq date (or date "1970-01-01"))
     (if (not title)
 	(progn
@@ -72,10 +73,10 @@
       (bookiez-add-book author title isbn date thumbnail))))
 
 (defun bookiez-lookup (isbn)
-  (loop for elem in bookiez-books
-	when (equal isbn (nth 2 elem))
-	return (list (nth 1 elem) (nth 0 elem)
-		     (nth 3 elem) (nth 5 elem))))
+  (cl-loop for elem in bookiez-books
+	   when (equal isbn (nth 2 elem))
+	   return (list (nth 1 elem) (nth 0 elem)
+			(nth 3 elem) (nth 5 elem))))
 
 (defun bookiez-play (file)
   (call-process "amixer" nil nil nil "-c" "0" "set" "Speaker" "100%")
@@ -122,17 +123,17 @@
     (bookiez-read-database))
   (let ((do-insert t)
 	(update-read nil))
-    (loop for book in bookiez-books
-	  for unread = (member "unread" (nthcdr 6 book))
-	  when (or (equal isbn (nth 2 book))
-		   (and (equal author (car book))
-			(equal title (cadr book))))
-	  do (message "%s/%s (%s) already exists in the database%s"
-		      author title isbn
-		      (if (setq update-read (and unread book))
-			  "; marking as read"
-			""))
-	  (setq do-insert nil))
+    (cl-loop for book in bookiez-books
+	     for unread = (member "unread" (nthcdr 6 book))
+	     when (or (equal isbn (nth 2 book))
+		      (and (equal author (car book))
+			   (equal title (cadr book))))
+	     do (message "%s/%s (%s) already exists in the database%s"
+			 author title isbn
+			 (if (setq update-read (and unread book))
+			     "; marking as read"
+			   ""))
+	     (setq do-insert nil))
     (cond
      (do-insert
       (push (list author title isbn date
