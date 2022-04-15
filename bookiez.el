@@ -109,7 +109,9 @@
 
 (defun bookiez-start-server ()
   (setq server-use-tcp t
-	server-host (system-name)
+	server-host (if (equal (system-name) "cat")
+			"fw"
+		      (system-name))
 	server-name "bookiez")
   (server-start))
 
