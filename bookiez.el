@@ -104,9 +104,10 @@
     (let ((image (buffer-substring (point) (point-max))))
       (kill-buffer (current-buffer))
       (with-current-buffer buffer
-	(save-excursion
-	  (goto-char point)
-	  (insert-image (create-image image nil t) "*"))))))
+	(when-let ((im (create-image image nil t)))
+	  (save-excursion
+	    (goto-char point)
+	    (insert-image im "*")))))))
 
 (defun bookiez-start-server ()
   (setq server-use-tcp t
