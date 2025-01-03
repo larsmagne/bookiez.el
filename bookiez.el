@@ -123,7 +123,7 @@
   (unless bookiez-books
     (bookiez-read-database))
   (let ((do-insert t)
-	(update-read nil))
+	(update-read t))
     (cl-loop for book in bookiez-books
 	     for unread = (member "unread" (nthcdr 6 book))
 	     when (or (equal isbn (nth 2 book))
@@ -131,7 +131,7 @@
 			   (equal title (cadr book))))
 	     do (message "%s/%s (%s) already exists in the database%s"
 			 author title isbn
-			 (if (setq update-read (and unread book))
+			 (if (setq update-read book)
 			     "; marking as read"
 			   ""))
 	     (setq do-insert nil))
