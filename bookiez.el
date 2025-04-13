@@ -18,7 +18,6 @@
 
 ;; (bookiez-display-isbn "9780307596888")
 
-(require 'cl)
 (require 'isbn)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
