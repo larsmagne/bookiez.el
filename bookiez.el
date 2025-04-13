@@ -1,4 +1,4 @@
-;;; bookiez.el --- Managing Books
+;;; bookiez.el --- Managing Books  -*- lexical-binding: t; -*-
 ;; Copyright (C) 2013 Lars Magne Ingebrigtsen
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
@@ -69,7 +69,7 @@
 		    t)
       (setq bookiez-last-isbn nil)
       (bookiez-play "61-KREVmorse .mp3")
-      (bookiez-add-book author title isbn date thumbnail))))
+      (bookiez-add-book author title isbn date thumbnail (eq save 'ebook)))))
 
 (defun bookiez-lookup (isbn)
   (cl-loop for elem in bookiez-books
@@ -87,16 +87,20 @@
    "-n" "10"
    (expand-file-name file "/music/repository/Various/Ringtones")))
 
-(defun bookiez-add-book-manually ()
+(defun bookiez-add-ebook-manually ()
+  (interactive)
+  (bookiez-add-book-manually t))
+
+(defun bookiez-add-book-manually (&optional ebook)
   (interactive)
   (bookiez-add-book (read-string "Author: ")
 		    (read-string "Title: ")
 		    (or bookiez-last-isbn (read-string "ISBN: "))
 		    "1970-01-01"
-		    nil)
+		    nil ebook)
   (setq bookiez-last-isbn nil))
 
-(defun bookiez-image-fetched (status buffer point)
+(defun bookiez-image-fetched (_status buffer point)
   (goto-char (point-min))
   (when (or (search-forward "\n\n" nil t)
 	    (search-forward "\r\n\r\n" nil t))
@@ -118,13 +122,11 @@
 
 (defvar bookiez-books nil)
 
-(defun bookiez-add-book (author title isbn date thumbnail)
-  (unless bookiez-books
-    (bookiez-read-database))
+(defun bookiez-add-book (author title isbn date thumbnail ebook)
+  (bookiez--possibly-read-database)
   (let ((do-insert t)
 	(update-read t))
     (cl-loop for book in bookiez-books
-	     for unread = (member "unread" (nthcdr 6 book))
 	     when (or (equal isbn (nth 2 book))
 		      (and (equal author (car book))
 			   (equal title (cadr book))))
@@ -139,24 +141,40 @@
       (push (list author title isbn date
 		  (format-time-string "%Y-%m-%d")
 		  thumbnail
+		  (if ebook "ebook" "paper")
 		  "unread")
 	    bookiez-books)
       (bookiez-write-database))
      (update-read
-      (setcdr (nthcdr 5 update-read)
-	      (delete "unread" (nthcdr 6 update-read)))
+      (setcdr (nthcdr 6 update-read)
+	      (delete "unread" (nthcdr 7 update-read)))
       (nconc update-read (list (concat "read:"
 				       (format-time-string "%Y-%m-%d"))))
       (bookiez-write-database)))))
+
+(defvar bookiez--database-timestamp nil)
+
+(defun bookiez--possibly-read-database ()
+  (when (or (null bookiez-books)
+	    (null bookiez--database-timestamp)
+	    (time-less-p bookiez--database-timestamp
+			 (file-attribute-modification-time
+			  (file-attributes bookiez-file))))
+    (bookiez-read-database)
+    (setq bookiez--database-timestamp
+	  (file-attribute-modification-time
+	   (file-attributes bookiez-file)))))
 
 (defun bookiez-read-database ()
   (setq bookiez-books nil)
   (with-temp-buffer
     (insert-file-contents bookiez-file)
     (while (not (eobp))
-      (push (split-string (buffer-substring (point) (line-end-position))
-			  "\t")
-	    bookiez-books)
+      (let ((book (split-string (buffer-substring (point) (line-end-position))
+				"\t")))
+	(while (< (length book) 7)
+	  (nconc book (list "")))
+	(push book bookiez-books))
       (forward-line 1))
     (setq bookiez-books (nreverse bookiez-books))))
 
@@ -168,15 +186,16 @@
 			     (subst-char-in-string ?\t ?  elem))
 			   book
 			   "\t")
-		"\n")))))
+		"\n")))
+    (setq bookiez--database-timestamp
+	  (file-attribute-modification-time (file-attributes bookiez-file)))))
 
 (defun bookiez (&optional start-server)
   "List the books in the bookiez database."
   (interactive)
   (when start-server
     (bookiez-start-server))
-  (unless bookiez-books
-    (bookiez-read-database))
+  (bookiez--possibly-read-database)
   (pop-to-buffer "*Bookiez*")
   (erase-buffer)
   (bookiez-mode)
@@ -262,19 +281,24 @@
 		    (list (current-buffer) (point))
 		    t))))
 
-(defvar bookiez-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\r" 'bookiez-choose)
-    (define-key map "q" 'bookiez-quit)
-    (define-key map "a" 'bookiez-add-book-manually)
-    (define-key map "i" 'bookiez-add-isbn)
-    (define-key map "r" 'bookiez-mark-as-read)
-    map))
+(defvar-keymap bookiez-mode-map
+  "RET" #'bookiez-choose
+  "q" #'bookiez-quit
+  "a" #'bookiez-add-book-manually
+  "i" #'bookiez-add-isbn
+  "e" #'bookiez-add-ebook
+  "E" #'bookiez-add-ebook-manually
+  "r" #'bookiez-mark-as-read)
 
 (defun bookiez-add-isbn (isbn)
   "Add ISBN to the database."
   (interactive "sISBN: ")
   (bookiez-display-isbn isbn t))
+
+(defun bookiez-add-ebook (isbn)
+  "Add ISBN to the database as an ebook."
+  (interactive "sISBN: ")
+  (bookiez-display-isbn isbn 'ebook))
 
 (defun bookiez-mode ()
   "Mode for bookiez mode buffers.
