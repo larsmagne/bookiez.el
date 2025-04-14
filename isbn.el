@@ -1,4 +1,4 @@
-;;; isbn.el --- Looking up ISBN numbers from various sources
+;;; isbn.el --- Looking up ISBN numbers from various sources -*- lexical-binding: t; -*-
 ;; Copyright (C) 2013 Lars Magne Ingebrigtsen
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
@@ -90,7 +90,7 @@
 	     ""))
    'isbn-parse-google (list vector index) t))
 
-(defun isbn-parse-google (status vector index)
+(defun isbn-parse-google (_status vector index)
   (goto-char (point-min))
   (when (search-forward "\n\n" nil t)
     (let* ((main-data (cdr (assq 'items (json-read))))
@@ -121,7 +121,7 @@
    'isbn-parse-isbndb
    (list vector index) t))
 
-(defun isbn-parse-isbndb (status vector index)
+(defun isbn-parse-isbndb (_status vector index)
   (goto-char (point-min))
   (when (search-forward "\n\n" nil t)
     (let* ((data (libxml-parse-xml-region (point) (point-max)))
@@ -158,7 +158,7 @@
    'isbn-parse-openlibrary
    (list vector index) t))
 
-(defun isbn-parse-openlibrary (status vector index)
+(defun isbn-parse-openlibrary (_status vector index)
   (goto-char (point-min))
   (when (search-forward "\n\n" nil t)
     (let ((data (cdar (json-read)))
@@ -197,7 +197,7 @@
    'isbn-parse-librarything
    (list vector index) t))
 
-(defun isbn-parse-librarything (status vector index)
+(defun isbn-parse-librarything (_status vector index)
   (goto-char (point-min))
   (when (search-forward "\n\n" nil t)
     (let* ((data (libxml-parse-xml-region (point) (point-max)))
