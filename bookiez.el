@@ -19,9 +19,9 @@
 ;; (bookiez-display-isbn "9780307596888")
 
 (require 'isbn)
+(require 'vtable)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
-(defvar bookiez-mode nil)
 
 (defun bookiez-thumbnail (thumbnail isbn)
   (if (and thumbnail
@@ -33,8 +33,9 @@
 (setq bookiez-last-isbn nil)
 
 (defun bookiez-display-isbn (isbn &optional save)
-  (message "Querying %s" isbn)
-  (bookiez-play "71-On the Beach .mp3")
+  (when save
+    (message "Querying %s" isbn)
+    (bookiez-play "71-On the Beach .mp3"))
   ;; If we have an EAN that contains the ISBN, then chop off the EAN
   ;; stuff and recompute the ISBN.
   (when (and (= (length isbn) 13)
@@ -49,6 +50,9 @@
     (message "Invalid ISBN %s" isbn)
     (bookiez-play "74-kaffe matthews - still striped .mp3")))
 
+(define-derived-mode bookiez-book-mode special-mode "Bookiez"
+  "Mode to display a book.")
+
 (defun bookiez-display-isbn-1 (isbn &optional save)
   (cl-destructuring-bind (title author date thumbnail)
       (or (bookiez-lookup isbn)
@@ -59,17 +63,20 @@
 	(progn
 	  (message "No match for %s" isbn)
 	  (bookiez-play "45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3"))
-      (switch-to-buffer "*isbn*")
-      (erase-buffer)
-      (bookiez-mode)
-      (insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
-      (url-retrieve (bookiez-thumbnail thumbnail isbn)
-		    'bookiez-image-fetched
-		    (list (current-buffer) (point))
-		    t)
-      (setq bookiez-last-isbn nil)
-      (bookiez-play "61-KREVmorse .mp3")
-      (bookiez-add-book author title isbn date thumbnail (eq save 'ebook)))))
+      (switch-to-buffer "*Bookiez Book*")
+      (let ((inhibit-read-only t))
+	(erase-buffer)
+	(bookiez-book-mode)
+	(insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
+	(url-retrieve (bookiez-thumbnail thumbnail isbn)
+		      'bookiez-image-fetched
+		      (list (current-buffer) (point))
+		      t)
+	(setq bookiez-last-isbn nil)
+	(bookiez-play "61-KREVmorse .mp3")
+	(when save
+	  (bookiez-add-book author title isbn date thumbnail
+			    (eq save 'ebook)))))))
 
 (defun bookiez-lookup (isbn)
   (cl-loop for elem in bookiez-books
@@ -107,10 +114,11 @@
     (let ((image (buffer-substring (point) (point-max))))
       (kill-buffer (current-buffer))
       (with-current-buffer buffer
-	(when-let ((im (create-image image nil t)))
-	  (save-excursion
-	    (goto-char point)
-	    (insert-image im "*")))))))
+	(let ((inhibit-read-only t))
+	  (when-let ((im (create-image image nil t)))
+	    (save-excursion
+	      (goto-char point)
+	      (insert-image im "*"))))))))
 
 (defun bookiez-start-server ()
   (setq server-use-tcp t
@@ -197,27 +205,34 @@
     (bookiez-start-server))
   (bookiez--possibly-read-database)
   (pop-to-buffer "*Bookiez*")
-  (erase-buffer)
   (bookiez-mode)
   (bookiez-display-authors))
 
-(defun bookiez-display-authors (&optional focus)
-  (setq bookiez-mode 'author)
-  (erase-buffer)
-  (let ((authors nil)
-	start)
-    (dolist (book bookiez-books)
-      (unless (member (car book) authors)
-	(push (car book) authors)))
-    (setq authors (sort authors 'string<))
-    (dolist (author authors)
-      (when (and focus
-		 (equal focus author))
-	(setq focus (point)))
-      (setq start (point))
-      (insert author "\n")
-      (put-text-property start (1+ start) 'bookiez-thing author))
-    (goto-char (or focus (point-min)))))
+(defun bookiez-display-authors ()
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (special-mode)
+    (setq truncate-lines t)
+    (make-vtable
+     :columns '((:name "Books" :min-width 6)
+		(:name "Name" :max-width 60))
+     :comparitor (lambda (o1 o2)
+		   (equal (cadr o1) (cadr o2)))
+     :objects-function
+     (lambda ()
+       (let ((authors (make-hash-table :test #'equal)))
+	 (dolist (book bookiez-books)
+	   (cl-incf (gethash (car book) authors 0)))
+	 (sort
+	  (let ((res nil))
+	    (maphash (lambda (k v)
+		       (push (list v k) res))
+		     authors)
+	    res)
+	  (lambda (a1 a2)
+	    (string< (cadr a1) (cadr a2))))))
+     :keymap bookiez-mode-map)
+    (goto-char (point-min))))
 
 (defun bookiez-choose ()
   "Choose the author or book under point."
@@ -239,34 +254,24 @@
     (bookiez-display-isbn-1 isbn t)))
 
 (defun bookiez-display-books (author)
-  (setq bookiez-mode 'book)
-  (erase-buffer)
-  (insert author "\n\n")
-  (let ((books nil)
-	start)
-    (dolist (book bookiez-books)
-      (when (equal author (car book))
-	(push book books)))
-    (setq books (sort books (lambda (b1 b2)
-			      (string< (nth 3 b1) (nth 3 b2)))))
-    (dolist (book books)
-      (setq start (point))
-      (insert (nth 3 book) " " (nth 1 book) "\n")
-      (put-text-property start (1+ start) 'bookiez-thing
-			 (bookiez-thumbnail (nth 5 book) (nth 2 book)))
-      (put-text-property start (1+ start) 'bookiez-isbn (nth 2 book))))
-  (goto-char (point-min))
-  (forward-line 2))
-
-(defun bookiez-quit ()
-  "Pop to the previous level."
-  (interactive)
-  (if (eq bookiez-mode 'book)
-      (progn
-	(goto-char (point-min))
-	(bookiez-display-authors
-	 (buffer-substring (point) (line-end-position))))
-    (bury-buffer)))
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (insert author "\n\n")
+    (let ((books nil)
+	  start)
+      (dolist (book bookiez-books)
+	(when (equal author (car book))
+	  (push book books)))
+      (setq books (sort books (lambda (b1 b2)
+				(string< (nth 3 b1) (nth 3 b2)))))
+      (dolist (book books)
+	(setq start (point))
+	(insert (nth 3 book) " " (nth 1 book) "\n")
+	(put-text-property start (1+ start) 'bookiez-thing
+			   (bookiez-thumbnail (nth 5 book) (nth 2 book)))
+	(put-text-property start (1+ start) 'bookiez-isbn (nth 2 book))))
+    (goto-char (point-min))
+    (forward-line 2)))
 
 (defun bookiez-display-cover (thumbnail)
   (save-excursion
@@ -282,8 +287,8 @@
 		    t))))
 
 (defvar-keymap bookiez-mode-map
-  "RET" #'bookiez-choose
-  "q" #'bookiez-quit
+  :parent vtable-map
+  "RET" #'bookiez-show-author
   "a" #'bookiez-add-book-manually
   "i" #'bookiez-add-isbn
   "e" #'bookiez-add-ebook
@@ -300,15 +305,68 @@
   (interactive "sISBN: ")
   (bookiez-display-isbn isbn 'ebook))
 
-(defun bookiez-mode ()
-  "Mode for bookiez mode buffers.
-
-\\{bookiez-mode-map}"
-  (interactive)
-  (setq major-mode 'bookiez-mode)
-  (setq mode-name "Bookiez")
-  (set (make-local-variable 'bookiez-mode) 'author)
-  (use-local-map bookiez-mode-map)
+(define-derived-mode bookiez-mode special-mode "Bookiez"
+  "Mode for bookiez mode buffers."
   (setq truncate-lines t))
+
+(define-derived-mode bookiez-author-mode special-mode "Bookiez"
+  "Mode to display books."
+  (setq truncate-lines t))
+
+(defvar-keymap bookiez-author-mode-map
+  :parent vtable-map
+  "RET" #'bookiez-author-display-book
+  "q" #'bury-buffer)
+
+(defun bookiez-show-author (author)
+  "Show the data for AUTHOR."
+  (interactive (list (cadr (vtable-current-object))))
+  (switch-to-buffer "*Bookiez Author*")
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (bookiez-author-mode)
+    (make-vtable
+     :columns '((:name "Format")
+		(:name "Read")
+		(:name "Year")
+		(:name "Bought")
+		(:name "Title" :primary t))
+     :objects-function
+     (lambda ()
+       (seq-filter (lambda (elem)
+		     (equal (car elem) author))
+		   bookiez-books))
+     :getter
+     (lambda (object column table)
+       (cl-destructuring-bind (author title isbn published-date
+				      bought-date thumbnail format
+				      . read)
+	   object
+	 (pcase (vtable-column table column)
+	   ("Format"
+	    (if (equal format "paper")
+		"📓"
+	      "📄"))
+	   ("Read"
+	    (if (member "unread" read)
+		"⚫"
+	      "🟢"))
+	   ("Year"
+	    (if (equal published-date "1970-01-01")
+		""
+	      (substring published-date 0 4)))
+	   ("Bought"
+	    (if (string< bought-date "2013-02-01")
+		""
+	      bought-date))
+	   ("Title"
+	    title))))
+     :keymap bookiez-author-mode-map)
+    (goto-char (point-min))))
+
+(defun bookiez-author-display-book ()
+  "Display the book under point."
+  (interactive)
+  (bookiez-display-isbn (nth 2 (vtable-current-object))))
 
 (provide 'bookiez)
