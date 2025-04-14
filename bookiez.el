@@ -76,7 +76,8 @@
 	(bookiez-play "61-KREVmorse .mp3")
 	(when save
 	  (bookiez-add-book author title isbn date thumbnail
-			    (eq save 'ebook)))))))
+			    (eq save 'ebook)
+			    nil))))))
 
 (defun bookiez-lookup (isbn)
   (cl-loop for elem in bookiez-books
@@ -98,14 +99,27 @@
   (interactive)
   (bookiez-add-book-manually t))
 
+(defvar bookiez-author-history nil)
+
 (defun bookiez-add-book-manually (&optional ebook)
   (interactive)
-  (bookiez-add-book (read-string "Author: ")
-		    (read-string "Title: ")
-		    (or bookiez-last-isbn (read-string "ISBN: "))
-		    "1970-01-01"
-		    nil ebook)
-  (setq bookiez-last-isbn nil))
+  (let ((author (read-string "Author: " nil 'bookiez-author-history))
+	(title (read-string "Title: "))
+	(date "1970-01-01")
+	(isbn bookiez-last-isbn)
+	(thumb nil))
+    (unless isbn
+      (when-let ((match (isbn-lookup (concat author " " title))))
+	(when (y-or-n-p (format "Is this %s? "
+				(car match)))
+	  (setq date (nth 2 match)
+		isbn (nth 4 match)
+		thumb (nth 3 match)))))
+    (unless isbn
+      (setq isbn (read-string "ISBN: ")))
+    (bookiez-add-book author title isbn date thumb ebook
+		      (y-or-n-p "Book read? "))
+    (setq bookiez-last-isbn nil)))
 
 (defun bookiez-image-fetched (_status buffer point)
   (goto-char (point-min))
@@ -130,7 +144,8 @@
 
 (defvar bookiez-books nil)
 
-(defun bookiez-add-book (author title isbn date thumbnail ebook)
+(defun bookiez-add-book (author title isbn date thumbnail ebook
+				read)
   (bookiez--possibly-read-database)
   (let ((do-insert t)
 	(update-read t))
@@ -150,7 +165,7 @@
 		  (format-time-string "%Y-%m-%d")
 		  thumbnail
 		  (if ebook "ebook" "paper")
-		  "unread")
+		  (if read "" "unread"))
 	    bookiez-books)
       (bookiez-write-database))
      (update-read
@@ -289,21 +304,28 @@
 (defvar-keymap bookiez-mode-map
   :parent vtable-map
   "RET" #'bookiez-show-author
+  "c" #'bookiez-edit-author
   "a" #'bookiez-add-book-manually
   "i" #'bookiez-add-isbn
-  "e" #'bookiez-add-ebook
-  "E" #'bookiez-add-ebook-manually
+  "e" #'bookiez-add-ebook-manually
   "r" #'bookiez-mark-as-read)
+
+(defun bookiez-edit-author (name new-name)
+  "Edit the author name under point."
+  (interactive (list (nth 1 (vtable-current-object))
+		     (read-string "New name: "
+				  (nth 1 (vtable-current-object)))))
+  (cl-loop for book in bookiez-books
+	   when (equal (car book) name)
+	   do (setcar book new-name))
+  (bookiez-write-database)
+  (forward-line 1)
+  (vtable-revert-command))
 
 (defun bookiez-add-isbn (isbn)
   "Add ISBN to the database."
   (interactive "sISBN: ")
   (bookiez-display-isbn isbn t))
-
-(defun bookiez-add-ebook (isbn)
-  "Add ISBN to the database as an ebook."
-  (interactive "sISBN: ")
-  (bookiez-display-isbn isbn 'ebook))
 
 (define-derived-mode bookiez-mode special-mode "Bookiez"
   "Mode for bookiez mode buffers."
@@ -316,6 +338,8 @@
 (defvar-keymap bookiez-author-mode-map
   :parent vtable-map
   "RET" #'bookiez-author-display-book
+  "&" #'bookiez-author-goodreads
+  "c" #'bookiez-author-edit-book
   "q" #'bury-buffer)
 
 (defun bookiez-show-author (author)
@@ -338,9 +362,9 @@
 		   bookiez-books))
      :getter
      (lambda (object column table)
-       (cl-destructuring-bind (author title isbn published-date
-				      bought-date thumbnail format
-				      . read)
+       (cl-destructuring-bind ( _author title _isbn published-date
+				bought-date _thumbnail format
+				. read)
 	   object
 	 (pcase (vtable-column table column)
 	   ("Format"
@@ -368,5 +392,26 @@
   "Display the book under point."
   (interactive)
   (bookiez-display-isbn (nth 2 (vtable-current-object))))
+
+(defun bookiez-author-goodreads ()
+  "Go to the Goodreads for the book."
+  (interactive)
+  (browse-url
+   (format "https://www.goodreads.com/search?q=%s"
+	   (nth 2 (vtable-current-object)))))
+
+(defun bookiez-author-edit-book ()
+  "Edit the author/book name under point."
+  (interactive)
+  (let* ((current (vtable-current-object))
+	 (author (read-string "New author name: " (nth 0 current)))
+	 (title (read-string "New book title: " (nth 1 current))))
+    (cl-loop for book in bookiez-books
+	     when (eq current book)
+	     do (setf (car book) author)
+	     (setf (cadr book) title))
+    (bookiez-write-database)
+    (forward-line 1)
+    (vtable-revert-command)))
 
 (provide 'bookiez)
