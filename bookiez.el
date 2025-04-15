@@ -479,4 +479,49 @@
     (forward-line 1)
     (vtable-revert-command)))
 
+(defun bookiez-fill-isbn ()
+  "Query for ISBN for books that lack it."
+  (cl-loop with data
+	   for book in bookiez-books
+	   for isbn = (nth 2 book)
+	   for string = (format "%s %s" (nth 0 book)
+				(nth 1 book))
+	   when (and (not (isbn-valid-p isbn))
+		     (y-or-n-p (format "Query %s? " string))
+		     (setq data (isbn-search-goodreads string))
+		     (car data))
+	   do
+	   (setf (nth 2 book) (car data))
+	   (when (zerop (length (nth 5 book)))
+	     (setf (nth 5 book) (cadr data))))
+  (bookiez-write-database))
+
+(defun bookiez-missing-isbn ()
+  (pop-to-buffer "*missing*")
+  (erase-buffer)
+  (cl-loop for book in bookiez-books
+	   for isbn = (nth 2 book)
+	   for string = (format "%s %s" (nth 0 book)
+				(nth 1 book))
+	   when (not (isbn-valid-p isbn))
+	   do (insert string "\n")))
+
+(defun bookiez-fill-image-cache ()
+  (unless (file-exists-p "~/.emacs.d/bookiez-cache/")
+    (make-directory "~/.emacs.d/bookiez-cache/"))
+  (cl-loop for book in bookiez-books
+	   for isbn = (nth 2 book)
+	   for url = (nth 5 book)
+	   for file = (expand-file-name (concat isbn ".jpg")
+					"~/.emacs.d/bookiez-cache/")
+	   when (and (not (file-exists-p file))
+		     url
+		     (string-match "\\`http" url))
+	   do (when-let ((buf (ignore-errors (url-retrieve-synchronously url))))
+		(with-current-buffer buf
+		  (goto-char (point-min))
+		  (when (and (search-forward "\n\n" nil t)
+			     (not (eobp)))
+		    (write-region (point) (point-max) file))))))
+
 (provide 'bookiez)
