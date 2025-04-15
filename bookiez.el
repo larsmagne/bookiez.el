@@ -55,6 +55,7 @@
   "Mode to display a book.")
 
 (defvar-keymap bookiez-book-mode-map
+  "a" #'bookiez-add-book-manually
   "c" #'bookiez-book-edit)
 
 (defvar bookiez-book-isbn nil)
@@ -139,18 +140,18 @@
 	(isbn bookiez-last-isbn)
 	(thumb nil))
     (unless isbn
-      (when-let ((match (isbn-lookup (concat author " " title))))
+      (when-let ((match (isbn-search-goodreads (concat author " " title))))
 	(when (y-or-n-p (format "Is this %s? "
 				(car match)))
-	  (setq date (nth 2 match)
-		isbn (nth 4 match)
-		thumb (nth 3 match)))))
+	  (setq isbn (car match)
+		thumb (cadr match)))))
     (unless isbn
       (setq isbn (read-string "ISBN: ")))
     (when (zerop (length isbn))
       (setq isbn (format "%s" (cl-decf bookiez--unknown-isbn))))
     (bookiez-add-book author title isbn date thumb ebook
 		      (y-or-n-p "Book read? "))
+    (bookiez-cache-image isbn thumb)
     (setq bookiez-last-isbn nil)))
 
 (defun bookiez-image-fetched (_status buffer point)
@@ -295,8 +296,8 @@ If given a prefix, don't mark it read on a specific date."
       (error "No book on the current line"))
     (setcdr (nthcdr 6 book) nil)
     (unless unknown-date
-      (nconc update-read (list (concat "read:"
-				       (format-time-string "%Y-%m-%d")))))
+      (nconc book (list (concat "read:"
+				(format-time-string "%Y-%m-%d")))))
     (bookiez-write-database)))
 
 (defun bookiez-display-books (author)
@@ -335,8 +336,8 @@ If given a prefix, don't mark it read on a specific date."
 (defvar-keymap bookiez-mode-map
   :parent vtable-map
   "RET" #'bookiez-show-author
-  "c" #'bookiez-edit-author
   "a" #'bookiez-add-book-manually
+  "c" #'bookiez-edit-author
   "i" #'bookiez-add-isbn
   "e" #'bookiez-add-ebook-manually)
 
@@ -367,6 +368,7 @@ If given a prefix, don't mark it read on a specific date."
 (defvar-keymap bookiez-author-mode-map
   :parent vtable-map
   "RET" #'bookiez-author-display-book
+  "a" #'bookiez-add-book-manually
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
   "C" #'bookiez-author-edit-isin
