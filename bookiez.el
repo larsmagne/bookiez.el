@@ -358,7 +358,7 @@ If given a prefix, don't mark it read on a specific date."
   (vtable-revert-command))
 
 (defun bookiez-add-isbn (isbn)
-  "Add ISBN to the database."
+  "Add the book with ISBN to the database."
   (interactive "sISBN: ")
   (bookiez-display-isbn isbn t))
 
@@ -370,6 +370,7 @@ If given a prefix, don't mark it read on a specific date."
   :parent vtable-map
   "RET" #'bookiez-author-display-book
   "A" #'bookiez-author-display-author
+  "i" #'bookiez-add-isbn
   "a" #'bookiez-add-book-manually
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
