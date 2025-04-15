@@ -44,20 +44,25 @@
 ;; General interface.
 
 (defun isbn-lookup (isbn)
+  "Return a list of author/title/year/thumbnail for ISBN."
   (let ((result (make-vector (length isbn-lookup-types) nil))
 	(index 0))
+    ;; The idea here is that we ask all the different APIs in
+    ;; parallel.
     (dolist (type isbn-lookup-types)
       (aset result index
 	    (cons (funcall (intern (format "isbn-lookup-%s" type))
 			   isbn result index)
 		  nil))
       (cl-incf index))
+    ;; Then we exit when we've got the first result.
     (while (and (not (isbn-first-result result))
 		(isbn-first-living-buffer result))
       (accept-process-output nil nil 100))
     (isbn-first-result result)))
 
 (defun isbn-lookup-all (isbn)
+  "Same as `isbn-lookup', but return results from all providers."
   (let ((result (make-vector (length isbn-lookup-types) nil))
 	(index 0))
     (dolist (type isbn-lookup-types)
