@@ -37,7 +37,8 @@
   `(google
     ,@(if isbn-isbndb-key '(isbndb))
     openlibrary
-    ,@(if isbn-librarything-key '(librarything)))
+    ,@(if isbn-librarything-key '(librarything))
+    goodreads)
   "List of lookup engines to use, and the order to look up ISBNs in.")
 
 ;; General interface.
@@ -55,6 +56,27 @@
 		(isbn-first-living-buffer result))
       (accept-process-output nil nil 100))
     (isbn-first-result result)))
+
+(defun isbn-lookup-all (isbn)
+  (let ((result (make-vector (length isbn-lookup-types) nil))
+	(index 0))
+    (dolist (type isbn-lookup-types)
+      (aset result index
+	    (cons (funcall (intern (format "isbn-lookup-%s" type))
+			   isbn result index)
+		  nil))
+      (cl-incf index))
+    (cl-loop repeat 200
+	     while (isbn-first-living-buffer result)
+	     do (accept-process-output nil nil 100))
+    result))
+
+(defun isbn-covers (isbn)
+  "Return cover URLs for ISBN."
+  (cl-loop for result across (isbn-lookup-all isbn)
+	   for cover = (nth 4 result)
+	   when cover
+	   collect cover))
 
 (defun isbn-first-result (result)
   (cl-loop for elem across result
@@ -225,6 +247,29 @@
   (kill-buffer (current-buffer)))
 
 ;;; Goodreads search.
+
+(defun isbn-lookup-goodreads (isbn vector index)
+  (let ((dummy (get-buffer-create " *goodreads*")))
+    (url-retrieve
+     (format "https://www.goodreads.com/search?q=%s&qid=" isbn)
+     (lambda (_)
+       (goto-char (point-min))
+       (when (search-forward "\n\n" nil t)
+	 (let ((dom (libxml-parse-html-region (point) (point-max))))
+	   (cl-loop for elem in (dom-by-tag dom 'script)
+		    when (equal (dom-attr elem 'type) "application/ld+json")
+		    return
+		    (let ((json (json-parse-string (dom-text elem))))
+		      (setcdr (aref vector index)
+			      (list
+			       (gethash "name" json)
+			       (gethash "name" (elt (gethash "author" json) 0))
+			       nil
+			       (gethash "image" json)))))))
+       (kill-buffer (current-buffer))
+       (kill-buffer dummy))
+     nil t t)
+    dummy))
 
 (defun isbn-search-goodreads (string)
   (cl-loop with data
