@@ -286,13 +286,18 @@
 		(equal (cadr o1) (cadr o2))))))
     (goto-char (point-min))))
 
-(defun bookiez-mark-as-read ()
-  "Mark the book under point as read."
-  (interactive)
-  (let ((isbn (get-text-property (line-beginning-position) 'bookiez-isbn)))
-    (unless isbn
-      (error "No ISBN on the current line"))
-    (bookiez-display-isbn-1 isbn t)))
+(defun bookiez-mark-as-read (&optional unknown-date)
+  "Mark the book under point as read.
+If given a prefix, don't mark it read on a specific date."
+  (interactive "P")
+  (let ((book (vtable-current-object)))
+    (unless book
+      (error "No book on the current line"))
+    (setcdr (nthcdr 6 book) nil)
+    (unless unknown-date
+      (nconc update-read (list (concat "read:"
+				       (format-time-string "%Y-%m-%d")))))
+    (bookiez-write-database)))
 
 (defun bookiez-display-books (author)
   (let ((inhibit-read-only t))
@@ -333,8 +338,7 @@
   "c" #'bookiez-edit-author
   "a" #'bookiez-add-book-manually
   "i" #'bookiez-add-isbn
-  "e" #'bookiez-add-ebook-manually
-  "r" #'bookiez-mark-as-read)
+  "e" #'bookiez-add-ebook-manually)
 
 (defun bookiez-edit-author (name new-name)
   "Edit the author name under point."
@@ -366,6 +370,7 @@
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
   "C" #'bookiez-author-edit-isin
+  "r" #'bookiez-mark-as-read
   "q" #'bury-buffer)
 
 (define-derived-mode bookiez-author-mode special-mode "Bookiez"
