@@ -269,7 +269,15 @@
 			      (list
 			       (gethash "name" json)
 			       (gethash "name" (elt (gethash "author" json) 0))
-			       nil
+			       (cl-loop for p in (dom-by-tag dom 'p)
+					when (equal (dom-attr p 'data-testid)
+						    "publicationInfo")
+					return
+					(format-time-string
+					 "%Y-%m-%d" (encode-time
+						     (decoded-time-set-defaults
+						      (parse-time-string
+						       (dom-text p))))))
 			       (gethash "image" json)))))))
        (kill-buffer (current-buffer))
        (kill-buffer dummy))
