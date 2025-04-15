@@ -96,6 +96,9 @@
     (let* ((main-data (cdr (assq 'items (json-read))))
 	   (data (and main-data (aref main-data 0)))
 	   (volume (assq 'volumeInfo data))
+	   (isbn (cl-loop for entry across
+			  (cdr (assq 'industryIdentifiers volume))
+			  return (cdr (assq 'identifier entry))))
 	   title author thumbnail date)
       (setq title (cdr (assq 'title volume)))
       (when (assq 'subtitle volume)
@@ -108,7 +111,7 @@
 				 (cdr (assq 'imageLinks volume)))))
       (when (and title author)
 	(setcdr (aref vector index)
-		(list title author date thumbnail)))))
+		(list title author date thumbnail isbn)))))
   (kill-buffer (current-buffer)))
 
 ;;; ISBNDB support
@@ -210,5 +213,49 @@
 		      "1970-01-01"
 		      nil)))))
   (kill-buffer (current-buffer)))
+
+;;; Goodreads search.
+
+(defun isbn-search-goodreads (string)
+  (let* ((candidates (isbn-search-goodreads-1 string))
+	 (url
+	  (cl-loop for candidate in candidates
+		   when (y-or-n-p (format "Is it %s - %s? "
+					  (caar candidate)
+					  (caadr candidate)))
+		   return (shr-expand-url (cdar candidate)
+					  "https://www.goodreads.com/")))
+	 (dom
+	  (with-current-buffer (url-retrieve-synchronously url)
+	    (goto-char (point-min))
+	    (prog1
+		(and (search-forward "\n\n")
+		     (libxml-parse-html-region (point) (point-max)))
+	      (kill-buffer (current-buffer))))))
+    (cl-loop for elem in (dom-by-tag dom 'script)
+	     when (equal (dom-attr elem 'type) "application/ld+json")
+	     return (let ((json (json-parse-string (dom-text elem))))
+		      (list (gethash "isbn" json)
+			    (gethash "image" json))))))
+
+(defun isbn-search-goodreads-1 (string)
+  (let ((dom
+	 (with-current-buffer (url-retrieve-synchronously
+			       (format
+				"https://www.goodreads.com/search?q=%s&qid="
+				(browse-url-encode-url string)))
+	   (goto-char (point-min))
+	   (prog1
+	       (and (search-forward "\n\n")
+		    (libxml-parse-html-region (point) (point-max)))
+	     (kill-buffer (current-buffer))))))
+    (cl-loop for book in (dom-by-tag dom 'tr)
+	     when (equal (dom-attr book 'itemtype) "http://schema.org/Book")
+	     collect (cl-loop for link in (dom-by-tag book 'a)
+			      when (member (dom-attr link 'class)
+					   '("authorName" "bookTitle"))
+			      collect (cons (string-clean-whitespace
+					     (dom-texts link))
+					    (dom-attr link 'href))))))
 
 (provide 'isbn)
