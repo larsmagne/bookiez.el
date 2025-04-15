@@ -79,6 +79,16 @@
 		    ((= checksum 11) "0")
 		    (t (char-to-string (+ ?0 checksum)))))))
 
+(defun isbn-valid-p (isbn)
+  ;; If we have an EAN that contains the ISBN, then chop off the EAN
+  ;; stuff and recompute the ISBN.
+  (when (and (= (length isbn) 13)
+	     (not (string-match "^978" isbn))) ; ISBN-13
+    (setq isbn (isbn-compute (substring isbn 3 12))))
+  (or (= (length isbn) 13)
+      (and (= (length isbn) 10)
+	   (equal isbn (isbn-compute (substring isbn 0 9))))))
+
 ;;; Google Books API
 
 (defun isbn-lookup-google (isbn vector index)
@@ -217,26 +227,31 @@
 ;;; Goodreads search.
 
 (defun isbn-search-goodreads (string)
-  (let* ((candidates (isbn-search-goodreads-1 string))
-	 (url
-	  (cl-loop for candidate in candidates
-		   when (y-or-n-p (format "Is it %s - %s? "
-					  (caar candidate)
-					  (caadr candidate)))
-		   return (shr-expand-url (cdar candidate)
-					  "https://www.goodreads.com/")))
-	 (dom
-	  (with-current-buffer (url-retrieve-synchronously url)
-	    (goto-char (point-min))
-	    (prog1
-		(and (search-forward "\n\n")
-		     (libxml-parse-html-region (point) (point-max)))
-	      (kill-buffer (current-buffer))))))
+  (cl-loop with data
+	   for candidate in (isbn-search-goodreads-1 string)
+	   when (and (y-or-n-p (format "Is it %s - %s? "
+				       (caar candidate)
+				       (caadr candidate)))
+		     (setq data (isbn-try-candidate
+				 (shr-expand-url
+				  (cdar candidate)
+				  "https://www.goodreads.com/"))))
+	   return data))
+
+(defun isbn-try-candidate (url)
+  (let ((dom
+	 (with-current-buffer (url-retrieve-synchronously url)
+	   (goto-char (point-min))
+	   (prog1
+	       (and (search-forward "\n\n" nil t)
+		    (libxml-parse-html-region (point) (point-max)))
+	     (kill-buffer (current-buffer))))))
     (cl-loop for elem in (dom-by-tag dom 'script)
 	     when (equal (dom-attr elem 'type) "application/ld+json")
 	     return (let ((json (json-parse-string (dom-text elem))))
-		      (list (gethash "isbn" json)
-			    (gethash "image" json))))))
+		      (and (gethash "isbn" json)
+			   (list (gethash "isbn" json)
+				 (gethash "image" json)))))))
 
 (defun isbn-search-goodreads-1 (string)
   (let ((dom
@@ -246,7 +261,7 @@
 				(browse-url-encode-url string)))
 	   (goto-char (point-min))
 	   (prog1
-	       (and (search-forward "\n\n")
+	       (and (search-forward "\n\n" nil t)
 		    (libxml-parse-html-region (point) (point-max)))
 	     (kill-buffer (current-buffer))))))
     (cl-loop for book in (dom-by-tag dom 'tr)
