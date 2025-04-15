@@ -101,6 +101,8 @@
 
 (defvar bookiez-author-history nil)
 
+(defvar bookiez--unknown-isbn -4000)
+
 (defun bookiez-add-book-manually (&optional ebook)
   (interactive)
   (let ((author (read-string "Author: " nil 'bookiez-author-history))
@@ -117,6 +119,8 @@
 		thumb (nth 3 match)))))
     (unless isbn
       (setq isbn (read-string "ISBN: ")))
+    (when (zerop (length isbn))
+      (setq isbn (format "%s" (cl-decf bookiez--unknown-isbn))))
     (bookiez-add-book author title isbn date thumb ebook
 		      (y-or-n-p "Book read? "))
     (setq bookiez-last-isbn nil)))
@@ -237,7 +241,8 @@
      (lambda ()
        (let ((authors (make-hash-table :test #'equal)))
 	 (dolist (book bookiez-books)
-	   (cl-incf (gethash (car book) authors 0)))
+	   (dolist (author (split-string (car book) ", "))
+	     (cl-incf (gethash author authors 0))))
 	 (sort
 	  (let ((res nil))
 	    (maphash (lambda (k v)
@@ -316,8 +321,11 @@
 		     (read-string "New name: "
 				  (nth 1 (vtable-current-object)))))
   (cl-loop for book in bookiez-books
-	   when (equal (car book) name)
-	   do (setcar book new-name))
+	   for authors = (split-string (car book) ", ")
+	   when (member name authors)
+	   do (let ((new-list (delete name authors)))
+		(push new-name new-list)
+		(setcar book (string-join new-list ", "))))
   (bookiez-write-database)
   (forward-line 1)
   (vtable-revert-command))
@@ -354,11 +362,12 @@
 		(:name "Read")
 		(:name "Year")
 		(:name "Bought")
+		(:name "Read-Time")
 		(:name "Title" :primary t))
      :objects-function
      (lambda ()
        (seq-filter (lambda (elem)
-		     (equal (car elem) author))
+		     (member author (split-string (car elem) ", ")))
 		   bookiez-books))
      :getter
      (lambda (object column table)
@@ -380,9 +389,19 @@
 		""
 	      (substring published-date 0 4)))
 	   ("Bought"
-	    (if (string< bought-date "2013-02-01")
+	    ;; Registration started in 2013, so the data before that
+	    ;; isn't accurate.  And the second date is when ebook data
+	    ;; was imported, so it's not accurate either.
+	    (if (or (string< bought-date "2013-02-01")
+		    (equal bought-date "2025-04-14"))
 		""
 	      bought-date))
+	   ("Read-Time"
+	    (or
+	     (cl-loop for elem in read
+		      when (string-match "\\`read:\\(.*\\)" elem)
+		      return (match-string 1 elem))
+	     ""))
 	   ("Title"
 	    title))))
      :keymap bookiez-author-mode-map)
