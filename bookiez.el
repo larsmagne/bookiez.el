@@ -260,26 +260,30 @@
     (erase-buffer)
     (special-mode)
     (setq truncate-lines t)
-    (make-vtable
-     :columns '((:name "Books" :min-width 6)
-		(:name "Name" :max-width 60))
-     :comparitor (lambda (o1 o2)
-		   (equal (cadr o1) (cadr o2)))
-     :objects-function
-     (lambda ()
-       (let ((authors (make-hash-table :test #'equal)))
-	 (dolist (book bookiez-books)
-	   (dolist (author (split-string (car book) ", "))
-	     (cl-incf (gethash author authors 0))))
-	 (sort
-	  (let ((res nil))
-	    (maphash (lambda (k v)
-		       (push (list v k) res))
-		     authors)
-	    res)
-	  (lambda (a1 a2)
-	    (string< (cadr a1) (cadr a2))))))
-     :keymap bookiez-mode-map)
+    (let ((table
+	   (make-vtable
+	    :columns '((:name "Books" :min-width 6)
+		       (:name "Name" :max-width 60))
+	    :objects-function
+	    (lambda ()
+	      (let ((authors (make-hash-table :test #'equal)))
+		(dolist (book bookiez-books)
+		  (dolist (author (split-string (car book) ", "))
+		    (cl-incf (gethash author authors 0))))
+		(sort
+		 (let ((res nil))
+		   (maphash (lambda (k v)
+			      (push (list v k) res))
+			    authors)
+		   res)
+		 (lambda (a1 a2)
+		   (string< (cadr a1) (cadr a2))))))
+	    :keymap bookiez-mode-map)))
+      ;; This may not exist in all vtable versions.
+      (when (fboundp 'vtable-comparitor)
+	(setf (vtable-comparitor table)
+	      (lambda (o1 o2)
+		(equal (cadr o1) (cadr o2))))))
     (goto-char (point-min))))
 
 (defun bookiez-mark-as-read ()
@@ -376,19 +380,23 @@
     (erase-buffer)
     (bookiez-author-mode)
     (make-vtable
+     :row-colors '("#404040" "#202020")
+     :divider-width 2
+     ;:column-colors '("#404040" "#202020")
      :columns '((:name "Cover")
 		(:name "Format")
 		(:name "Read")
 		(:name "Year")
 		(:name "Bought")
 		(:name "Read-Time")
-		(:name "Title" :primary t))
+		(:name "Title" :primary t :min-width 80))
      :objects-function
      (lambda ()
        (seq-filter (lambda (elem)
 		     (member author (split-string (car elem) ", ")))
 		   bookiez-books))
      :getter #'bookiez--get-book-data
+     :formatter #'bookiez--formatter
      :keymap bookiez-author-mode-map)
     (goto-char (point-min))))
 
@@ -401,6 +409,7 @@
     (erase-buffer)
     (bookiez-author-mode)
     (make-vtable
+     :row-colors '("#202020" "#000000")
      :columns '((:name "Format")
 		(:name "Read")
 		(:name "Year")
@@ -410,8 +419,25 @@
 		(:name "Title"))
      :objects-function (lambda () bookiez-books)
      :getter #'bookiez--get-book-data
+     :formatter #'bookiez--formatter
      :keymap bookiez-author-mode-map)
     (goto-char (point-min))))
+
+(defun bookiez--formatter (value column table)
+  (propertize
+   (pcase (vtable-column table column)
+     ("Read-Time"
+      (if (equal value "")
+	  ""
+	(string-clean-whitespace
+	 (format-time-string
+	  "%b %e, %y"
+	  (encode-time
+	   (decoded-time-set-defaults
+	    (iso8601-parse-date value)))))))
+     (_
+      value))
+   'face 'vtable))
 
 (defun bookiez--get-book-data (object column table)
   (cl-destructuring-bind ( author title isbn published-date
@@ -426,7 +452,7 @@
       ("Read"
        (if (member "unread" read)
 	   "⚫"
-	 "🟢"))
+	 "✔️"))
       ("Year"
        (if (equal published-date "1970-01-01")
 	   ""
