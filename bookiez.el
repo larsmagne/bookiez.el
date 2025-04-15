@@ -369,6 +369,7 @@ If given a prefix, don't mark it read on a specific date."
 (defvar-keymap bookiez-author-mode-map
   :parent vtable-map
   "RET" #'bookiez-author-display-book
+  "A" #'bookiez-author-display-author
   "a" #'bookiez-add-book-manually
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
@@ -407,6 +408,11 @@ If given a prefix, don't mark it read on a specific date."
      :formatter #'bookiez--formatter
      :keymap bookiez-author-mode-map)
     (goto-char (point-min))))
+
+(defun bookiez-author-display-author ()
+  "Display the author of the book under point."
+  (interactive)
+  (bookiez-show-author (nth 0 (vtable-current-object))))
 
 (defun bookiez-list ()
   "List all the books."
