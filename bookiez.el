@@ -91,7 +91,8 @@
 	(when save
 	  (bookiez-add-book author title isbn date thumbnail
 			    (eq save 'ebook)
-			    nil))))))
+			    nil)
+	  (bookiez-cache-image isbn thumbnail))))))
 
 (defun bookiez-book-edit ()
   "Edit the book data in the current buffer."
@@ -360,6 +361,7 @@
   "RET" #'bookiez-author-display-book
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
+  "C" #'bookiez-author-edit-isin
   "q" #'bury-buffer)
 
 (define-derived-mode bookiez-author-mode special-mode "Bookiez"
@@ -393,6 +395,7 @@
 (defun bookiez-list ()
   "List all the books."
   (interactive)
+  (bookiez--possibly-read-database)
   (switch-to-buffer "*Bookiez*")
   (let ((inhibit-read-only t))
     (erase-buffer)
@@ -485,6 +488,20 @@
     (bookiez-write-database)
     (forward-line 1)
     (vtable-revert-command)))
+
+(defun bookiez-author-edit-isin ()
+  "Edit the ISBN of the book under point."
+  (interactive)
+  (let* ((current (vtable-current-object))
+	 (isbn (read-string "New ISBN: ")))
+    (cl-loop for book in bookiez-books
+	     when (eq current book)
+	     do
+	     (setf (nth 2 book) isbn)
+	     (when-let ((urls (isbn-covers isbn)))
+	       (setf (nth 5 book) (car urls))
+	       (bookiez-cache-image isbn (car urls))))
+    (bookiez-write-database)))
 
 (defun bookiez-fill-isbn ()
   "Query for ISBN for books that lack it."
