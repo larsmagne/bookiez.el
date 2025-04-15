@@ -20,6 +20,7 @@
 
 (require 'isbn)
 (require 'vtable)
+(require 'svg)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
 
@@ -273,17 +274,6 @@
      :keymap bookiez-mode-map)
     (goto-char (point-min))))
 
-(defun bookiez-choose ()
-  "Choose the author or book under point."
-  (interactive)
-  (let ((thing (get-text-property (line-beginning-position) 'bookiez-thing)))
-    (when thing
-      (cond
-       ((eq bookiez-mode 'author)
-	(bookiez-display-books thing))
-       ((eq bookiez-mode 'book)
-	(bookiez-display-cover thing))))))
-
 (defun bookiez-mark-as-read ()
   "Mark the book under point as read."
   (interactive)
@@ -377,7 +367,8 @@
     (erase-buffer)
     (bookiez-author-mode)
     (make-vtable
-     :columns '((:name "Format")
+     :columns '((:name "Cover")
+		(:name "Format")
 		(:name "Read")
 		(:name "Year")
 		(:name "Bought")
@@ -413,7 +404,7 @@
     (goto-char (point-min))))
 
 (defun bookiez--get-book-data (object column table)
-  (cl-destructuring-bind ( author title _isbn published-date
+  (cl-destructuring-bind ( author title isbn published-date
 			   bought-date _thumbnail format
 			   . read)
       object
@@ -451,7 +442,16 @@
       ("Author"
        author)
       ("Title"
-       title))))
+       title)
+      ("Cover"
+       (let ((file (expand-file-name (format "%s.jpg" isbn)
+				     "~/.emacs.d/bookiez-cache/")))
+	 (propertize "*" 'display 
+		     (if (file-exists-p file)
+			 (create-image file nil nil :height 100 :max-width 100)
+		       (let ((svg (svg-create 60 100)))
+			 (svg-rectangle svg 0 0 60 100 :fill "#202020")
+			 (svg-image svg)))))))))
 
 (defun bookiez-author-display-book ()
   "Display the book under point."
