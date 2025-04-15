@@ -80,7 +80,8 @@
 				      "~/.emacs.d/bookiez-cache/")))
 	  (if (file-exists-p file)
 	      (progn
-		(insert-image (create-image file))
+		(insert-image (create-image file nil nil :max-width 800
+					    :max-height 800))
 		(insert "\n"))
 	    (url-retrieve (bookiez-thumbnail thumbnail isbn)
 			  'bookiez-image-fetched
@@ -411,7 +412,7 @@ If given a prefix, don't mark it read on a specific date."
   "List all the books."
   (interactive)
   (bookiez--possibly-read-database)
-  (switch-to-buffer "*Bookiez*")
+  (switch-to-buffer "*Bookiez List*")
   (let ((inhibit-read-only t))
     (erase-buffer)
     (bookiez-author-mode)
