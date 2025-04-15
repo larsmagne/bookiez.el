@@ -75,10 +75,17 @@
 	(bookiez-book-mode)
 	(setq-local bookiez-book-isbn isbn)
 	(insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
-	(url-retrieve (bookiez-thumbnail thumbnail isbn)
-		      'bookiez-image-fetched
-		      (list (current-buffer) (point))
-		      t)
+	(let ((file (expand-file-name (format "%s.jpg" isbn)
+				      "~/.emacs.d/bookiez-cache/")))
+	  (if (file-exists-p file)
+	      (progn
+		(insert-image (create-image file))
+		(insert "\n"))
+	    (url-retrieve (bookiez-thumbnail thumbnail isbn)
+			  'bookiez-image-fetched
+			  (list (current-buffer) (point))
+			  t)))
+	(goto-char (point-min))
 	(setq bookiez-last-isbn nil)
 	(bookiez-play "61-KREVmorse .mp3")
 	(when save
@@ -348,16 +355,16 @@
   "Mode for bookiez mode buffers."
   (setq truncate-lines t))
 
-(define-derived-mode bookiez-author-mode special-mode "Bookiez"
-  "Mode to display books."
-  (setq truncate-lines t))
-
 (defvar-keymap bookiez-author-mode-map
   :parent vtable-map
   "RET" #'bookiez-author-display-book
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
   "q" #'bury-buffer)
+
+(define-derived-mode bookiez-author-mode special-mode "Bookiez"
+  "Mode to display books."
+  (setq truncate-lines t))
 
 (defun bookiez-show-author (author)
   "Show the data for AUTHOR."
@@ -507,21 +514,40 @@
 	   do (insert string "\n")))
 
 (defun bookiez-fill-image-cache ()
+  (cl-loop for book in bookiez-books
+	   do (bookiez-cache-image (nth 2 book) (nth 5 book))))
+
+(defun bookiez-cache-image (isbn url)
   (unless (file-exists-p "~/.emacs.d/bookiez-cache/")
     (make-directory "~/.emacs.d/bookiez-cache/"))
-  (cl-loop for book in bookiez-books
-	   for isbn = (nth 2 book)
+  (let ((file (expand-file-name (concat isbn ".jpg")
+				"~/.emacs.d/bookiez-cache/")))
+    (when (and (not (file-exists-p file))
+	       url
+	       (string-match "\\`http" url))
+      (when-let ((buf (ignore-errors (url-retrieve-synchronously url))))
+	(with-current-buffer buf
+	  (goto-char (point-min))
+	  (when (and (search-forward "\n\n" nil t)
+		     (not (re-search-forward "<div\\b" nil t))
+		     (not (eobp)))
+	    (write-region (point) (point-max) file))
+	  (kill-buffer (current-buffer)))))))
+
+(defun bookiez-query-covers (&optional from)
+  (cl-loop with started = (not from)
+	   for book in bookiez-books
 	   for url = (nth 5 book)
-	   for file = (expand-file-name (concat isbn ".jpg")
-					"~/.emacs.d/bookiez-cache/")
-	   when (and (not (file-exists-p file))
-		     url
-		     (string-match "\\`http" url))
-	   do (when-let ((buf (ignore-errors (url-retrieve-synchronously url))))
-		(with-current-buffer buf
-		  (goto-char (point-min))
-		  (when (and (search-forward "\n\n" nil t)
-			     (not (eobp)))
-		    (write-region (point) (point-max) file))))))
+	   when (equal (nth 1 book) from)
+	   do (setq started t)
+	   when (and (isbn-valid-p (nth 2 book))
+		     started
+		     (or (not url)
+			 (not (string-match "\\`http" url))
+			 (string-match "bks[0-9]+.books.google.com" url)))
+	   do (message "Querying %s" (nth 1 book))
+	   (when-let ((urls (isbn-covers (nth 2 book))))
+	     (setf (nth 5 book) (car urls))))
+  (bookiez-write-database))
 
 (provide 'bookiez)
