@@ -31,7 +31,8 @@
     (format "http://covers.librarything.com/devkey/%s/large/isbn/%s"
 	    isbn-librarything-key isbn)))
 
-(setq bookiez-last-isbn nil)
+(defvar bookiez-last-isbn nil)
+(defvar bookiez-books nil)
 
 (defun bookiez-display-isbn (isbn &optional save)
   (when save
@@ -257,6 +258,14 @@
   (bookiez-mode)
   (bookiez-display-authors))
 
+(defvar-keymap bookiez-mode-map
+  :parent vtable-map
+  "RET" #'bookiez-show-author
+  "a" #'bookiez-add-book-manually
+  "c" #'bookiez-edit-author
+  "i" #'bookiez-add-isbn
+  "e" #'bookiez-add-ebook-manually)
+
 (defun bookiez-display-authors ()
   (let ((inhibit-read-only t))
     (erase-buffer)
@@ -338,14 +347,6 @@ If given a prefix, don't mark it read on a specific date."
 		    'bookiez-image-fetched
 		    (list (current-buffer) (point))
 		    t))))
-
-(defvar-keymap bookiez-mode-map
-  :parent vtable-map
-  "RET" #'bookiez-show-author
-  "a" #'bookiez-add-book-manually
-  "c" #'bookiez-edit-author
-  "i" #'bookiez-add-isbn
-  "e" #'bookiez-add-ebook-manually)
 
 (defun bookiez-edit-author (name new-name)
   "Edit the author name under point."
@@ -612,5 +613,16 @@ If given a prefix, don't mark it read on a specific date."
 	   (when-let ((urls (isbn-covers (nth 2 book))))
 	     (setf (nth 5 book) (car urls))))
   (bookiez-write-database))
+
+(defun bookiez-fill-dates ()
+  (let ((isbn-lookup-types '(goodreads)))
+    (cl-loop for book in bookiez-books
+	     for isbn = (nth 2 book)
+	     when (isbn-valid-p isbn)
+	     do
+	     (message "Querying %s" (nth 1 book))
+	     (when-let ((data (isbn-lookup isbn)))
+	       (when (nth 2 data)
+		 (setf (nth 2 book) (nth 2 data)))))))
 
 (provide 'bookiez)
