@@ -53,6 +53,11 @@
 (define-derived-mode bookiez-book-mode special-mode "Bookiez"
   "Mode to display a book.")
 
+(defvar-keymap bookiez-book-mode-map
+  "c" #'bookiez-book-edit)
+
+(defvar bookiez-book-isbn nil)
+
 (defun bookiez-display-isbn-1 (isbn &optional save)
   (cl-destructuring-bind (title author date thumbnail)
       (or (bookiez-lookup isbn)
@@ -67,6 +72,7 @@
       (let ((inhibit-read-only t))
 	(erase-buffer)
 	(bookiez-book-mode)
+	(setq-local bookiez-book-isbn isbn)
 	(insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
 	(url-retrieve (bookiez-thumbnail thumbnail isbn)
 		      'bookiez-image-fetched
@@ -78,6 +84,19 @@
 	  (bookiez-add-book author title isbn date thumbnail
 			    (eq save 'ebook)
 			    nil))))))
+
+(defun bookiez-book-edit ()
+  "Edit the book data in the current buffer."
+  (interactive)
+  (let ((isbn bookiez-book-isbn))
+    (cl-loop for book in bookiez-books
+	     when (equal isbn (nth 2 book))
+	     do (let ((author (read-string "New author name: " (nth 0 book)))
+		      (title (read-string "New book title: " (nth 1 book))))
+		  (setf (car book) author)
+		  (setf (cadr book) title)))
+    (bookiez-write-database)
+    (bookiez-display-isbn-1 isbn)))
 
 (defun bookiez-lookup (isbn)
   (cl-loop for elem in bookiez-books
@@ -369,43 +388,70 @@
        (seq-filter (lambda (elem)
 		     (member author (split-string (car elem) ", ")))
 		   bookiez-books))
-     :getter
-     (lambda (object column table)
-       (cl-destructuring-bind ( _author title _isbn published-date
-				bought-date _thumbnail format
-				. read)
-	   object
-	 (pcase (vtable-column table column)
-	   ("Format"
-	    (if (equal format "paper")
-		"📓"
-	      "📄"))
-	   ("Read"
-	    (if (member "unread" read)
-		"⚫"
-	      "🟢"))
-	   ("Year"
-	    (if (equal published-date "1970-01-01")
-		""
-	      (substring published-date 0 4)))
-	   ("Bought"
-	    ;; Registration started in 2013, so the data before that
-	    ;; isn't accurate.  And the second date is when ebook data
-	    ;; was imported, so it's not accurate either.
-	    (if (or (string< bought-date "2013-02-01")
-		    (equal bought-date "2025-04-14"))
-		""
-	      bought-date))
-	   ("Read-Time"
-	    (or
-	     (cl-loop for elem in read
-		      when (string-match "\\`read:\\(.*\\)" elem)
-		      return (match-string 1 elem))
-	     ""))
-	   ("Title"
-	    title))))
+     :getter #'bookiez--get-book-data
      :keymap bookiez-author-mode-map)
     (goto-char (point-min))))
+
+(defun bookiez-list ()
+  "List all the books."
+  (interactive)
+  (switch-to-buffer "*Bookiez*")
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (bookiez-author-mode)
+    (make-vtable
+     :columns '((:name "Format")
+		(:name "Read")
+		(:name "Year")
+		(:name "Bought")
+		(:name "Read-Time")
+		(:name "Author" :max-width 25)
+		(:name "Title"))
+     :objects-function (lambda () bookiez-books)
+     :getter #'bookiez--get-book-data
+     :keymap bookiez-author-mode-map)
+    (goto-char (point-min))))
+
+(defun bookiez--get-book-data (object column table)
+  (cl-destructuring-bind ( author title _isbn published-date
+			   bought-date _thumbnail format
+			   . read)
+      object
+    (pcase (vtable-column table column)
+      ("Format"
+       (if (equal format "paper")
+	   "📓"
+	 "📄"))
+      ("Read"
+       (if (member "unread" read)
+	   "⚫"
+	 "🟢"))
+      ("Year"
+       (if (equal published-date "1970-01-01")
+	   ""
+	 (substring published-date 0 4)))
+      ("Bought"
+       ;; Registration started in 2013, so the data before that
+       ;; isn't accurate.  And the second date is when ebook data
+       ;; was imported, so it's not accurate either.
+       (cond
+	((or (string< bought-date "2013-02-01")
+	     (equal bought-date "2025-04-14"))
+	 "")
+	((< (length bought-date) 4)
+	 bought-date)
+	(t
+	 (substring bought-date 0 4))))
+      ("Read-Time"
+       (or
+	(cl-loop for elem in read
+		 when (string-match "\\`read:\\(.*\\)" elem)
+		 return (match-string 1 elem))
+	""))
+      ("Author"
+       author)
+      ("Title"
+       title))))
 
 (defun bookiez-author-display-book ()
   "Display the book under point."
