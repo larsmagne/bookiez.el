@@ -295,8 +295,13 @@ If given a prefix, don't mark it read on a specific date."
   (let ((book (vtable-current-object)))
     (unless book
       (error "No book on the current line"))
-    (setcdr (nthcdr 6 book) nil)
-    (unless unknown-date
+    (if unknown-date
+	;; Remove anything in the unread/read section.
+	(setcdr (nthcdr 6 book) nil)
+      ;; Remove the "unread"...
+      (setcdr (nthcdr 6 book)
+	      (delete "unread" (nthcdr 7 book)))
+      ;; ... and add a read:.
       (nconc book (list (concat "read:"
 				(format-time-string "%Y-%m-%d")))))
     (bookiez-write-database)))
