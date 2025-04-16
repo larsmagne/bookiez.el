@@ -402,10 +402,10 @@ If given a prefix, don't mark it read on a specific date."
      :columns '((:name "Cover")
 		(:name "Format")
 		(:name "Read")
-		(:name "Year")
+		(:name "Year" :primary t)
 		(:name "Bought")
 		(:name "Read-Time")
-		(:name "Title" :primary t :min-width 80))
+		(:name "Title" :min-width 80))
      :objects-function
      (lambda ()
        (seq-filter (lambda (elem)
@@ -433,9 +433,9 @@ If given a prefix, don't mark it read on a specific date."
      :row-colors '("#202020" "#000000")
      :columns '((:name "Format")
 		(:name "Read")
-		(:name "Year")
-		(:name "Bought")
-		(:name "Read-Time")
+		(:name "Year" :max-width 5)
+		(:name "Bought" :max-width 5)
+		(:name "Read-Time" :min-width 12)
 		(:name "Author" :max-width 25)
 		(:name "Title"))
      :objects-function (lambda () bookiez-books)
@@ -452,7 +452,7 @@ If given a prefix, don't mark it read on a specific date."
 	  ""
 	(string-clean-whitespace
 	 (format-time-string
-	  "%b %e, %y"
+	  "%b %e, %Y"
 	  (encode-time
 	   (decoded-time-set-defaults
 	    (iso8601-parse-date value)))))))
@@ -460,6 +460,18 @@ If given a prefix, don't mark it read on a specific date."
        (if (equal value "1970-01-01")
 	   ""
 	 (substring value 0 4)))
+     ("Bought"
+      ;; Registration started in 2013, so the data before that
+      ;; isn't accurate.  And the second date is when ebook data
+      ;; was imported, so it's not accurate either.
+      (cond
+       ((or (string< value "2013-02-01")
+	    (equal value "2025-04-14"))
+	"")
+       ((< (length value) 4)
+	value)
+       (t
+	(substring value 0 4))))
      (_
       value))
    'face 'vtable))
@@ -481,17 +493,7 @@ If given a prefix, don't mark it read on a specific date."
       ("Year"
        published-date)
       ("Bought"
-       ;; Registration started in 2013, so the data before that
-       ;; isn't accurate.  And the second date is when ebook data
-       ;; was imported, so it's not accurate either.
-       (cond
-	((or (string< bought-date "2013-02-01")
-	     (equal bought-date "2025-04-14"))
-	 "")
-	((< (length bought-date) 4)
-	 bought-date)
-	(t
-	 (substring bought-date 0 4))))
+       bought-date)
       ("Read-Time"
        (or
 	(cl-loop for elem in read
