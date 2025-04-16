@@ -330,3 +330,5 @@ If ALL-RESULTS, return the results from all providors."
 					    (dom-attr link 'href))))))
 
 (provide 'isbn)
+
+;;; isbn.el ends here.
