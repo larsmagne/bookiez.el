@@ -456,6 +456,10 @@ If given a prefix, don't mark it read on a specific date."
 	  (encode-time
 	   (decoded-time-set-defaults
 	    (iso8601-parse-date value)))))))
+     ("Year"
+       (if (equal value "1970-01-01")
+	   ""
+	 (substring value 0 4)))
      (_
       value))
    'face 'vtable))
@@ -475,9 +479,7 @@ If given a prefix, don't mark it read on a specific date."
 	   "⚫"
 	 "✔️"))
       ("Year"
-       (if (equal published-date "1970-01-01")
-	   ""
-	 (substring published-date 0 4)))
+       published-date)
       ("Bought"
        ;; Registration started in 2013, so the data before that
        ;; isn't accurate.  And the second date is when ebook data
@@ -623,6 +625,8 @@ If given a prefix, don't mark it read on a specific date."
 	     (message "Querying %s" (nth 1 book))
 	     (when-let ((data (isbn-lookup isbn)))
 	       (when (nth 2 data)
-		 (setf (nth 2 book) (nth 2 data)))))))
+		 (setf (nth 2 book) (nth 2 data))
+		 (message "Date for %s is %s" (nth 1 book) (nth 2 book))))
+	     (sleep-for 2))))
 
 (provide 'bookiez)
