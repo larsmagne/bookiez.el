@@ -274,6 +274,10 @@ If ALL-RESULTS, return the results from all providors."
 						       (dom-text p))))))
 			       (gethash "image" json)))))))
        (kill-buffer (current-buffer))
+       ;; We use the dummy buffer as the synchronising thing with
+       ;; `isbn-lookup' because Goodreads will redirect us to a
+       ;; different buffer and then kill the original buffer.  Very
+       ;; confusing.
        (kill-buffer dummy))
      nil t t)
     dummy))
