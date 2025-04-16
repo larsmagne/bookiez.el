@@ -501,11 +501,11 @@ If given a prefix, don't mark it read on a specific date."
     (pcase (vtable-column table column)
       ("Format"
        (if (equal format "paper")
-	   "📓"
+	   "📘"
 	 "📄"))
       ("Read"
        (if (member "unread" read)
-	   "⚫"
+	   "🟣"
 	 "✔️"))
       ("Year"
        published-date)
