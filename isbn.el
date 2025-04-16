@@ -22,7 +22,10 @@
 ;;; Code:
 
 (require 'json)
-(require 'cl)
+(require 'dom)
+(require 'shr)
+(require 'browse-url)
+(require 'time-date)
 
 (defvar isbn-isbndb-key nil
   "To use the isbndb lookup, get a developer key.")

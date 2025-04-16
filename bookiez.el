@@ -21,6 +21,8 @@
 (require 'isbn)
 (require 'vtable)
 (require 'svg)
+(require 'server)
+(require 'iso8601)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
 
