@@ -627,8 +627,9 @@ If given a prefix, don't mark it read on a specific date."
 	     (message "Querying %s" (nth 1 book))
 	     (when-let ((data (isbn-lookup isbn)))
 	       (when (nth 2 data)
-		 (setf (nth 2 book) (nth 2 data))
+		 (setf (nth 3 book) (nth 2 data))
 		 (message "Date for %s is %s" (nth 1 book) (nth 2 book))))
-	     (sleep-for 2))))
+	     (sleep-for 2)))
+  (bookiez-write-database))
 
 (provide 'bookiez)
