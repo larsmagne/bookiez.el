@@ -455,7 +455,7 @@ If given a prefix, don't mark it read on a specific date."
 		(:name "Published" :max-width 5)
 		(:name "Bought" :max-width 5)
 		(:name "Read" :min-width 12)
-		(:name "Author" :max-width 25)
+		(:name "Author" :max-width 20)
 		(:name "Title"))
      :objects-function (lambda () bookiez-books)
      :getter #'bookiez--get-book-data
