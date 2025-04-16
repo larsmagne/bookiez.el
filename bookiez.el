@@ -272,7 +272,7 @@
 (defun bookiez-display-authors ()
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (special-mode)
+    (bookiez-mode)
     (setq truncate-lines t)
     (let ((table
 	   (make-vtable
