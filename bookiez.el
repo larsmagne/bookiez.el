@@ -425,7 +425,7 @@ If given a prefix, don't mark it read on a specific date."
 		(:name "Status")
 		(:name "Published" :primary t :width 5)
 		(:name "Bought" :width 5)
-		(:name "Read" :min-width 11)
+		(:name "Read" :min-width 12)
 		(:name "Title" :min-width 80))
      :objects-function
      (lambda ()
