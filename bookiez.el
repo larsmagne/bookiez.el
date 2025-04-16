@@ -337,6 +337,20 @@ If given a prefix, don't mark it read on a specific date."
     (goto-char (point-min))
     (forward-line 2)))
 
+(defun bookiez-author-delete-book ()
+  "Delete the book under point."
+  (interactive)
+  (let ((book (vtable-current-object)))
+    (unless book
+      (user-error "No book on the current line"))
+    (unless (yes-or-no-p (format "Really delete %s: %s? "
+				 (car book) (cadr book)))
+      (user-error "Aborting"))
+    (setq bookiez-books (delq book bookiez-books))
+    (bookiez-write-database)
+    (vtable-remove-object (vtable-current-table) book)
+    (message "Removed %s: %s" (car book) (cadr book))))
+
 (defun bookiez-display-cover (thumbnail)
   (save-excursion
     (forward-line 1)
@@ -384,6 +398,7 @@ If given a prefix, don't mark it read on a specific date."
   "c" #'bookiez-author-edit-book
   "C" #'bookiez-author-edit-isin
   "r" #'bookiez-mark-as-read
+  "DEL" #'bookiez-author-delete-book
   "q" #'bury-buffer)
 
 (define-derived-mode bookiez-author-mode special-mode "Bookiez"
@@ -633,5 +648,16 @@ If given a prefix, don't mark it read on a specific date."
 		 (message "Date for %s is %s" (nth 1 book) (nth 2 book))))
 	     (sleep-for 2)))
   (bookiez-write-database))
+
+(defun bookiez-list-duplicate-isbn ()
+  (pop-to-buffer "*duplicates*")
+  (erase-buffer)
+  (let ((table (make-hash-table :test #'equal)))
+    (dolist (book bookiez-books)
+      (let ((isbn (nth 2 book)))
+	(when-let ((other (gethash isbn table)))
+	  (insert (format "%s %s -> %s %s\n" (nth 0 other) (nth 1 other)
+			  (nth 0 book) (nth 1 book))))
+	(setf (gethash isbn table) book)))))
 
 (provide 'bookiez)
