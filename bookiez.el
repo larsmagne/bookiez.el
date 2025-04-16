@@ -313,7 +313,9 @@ If given a prefix, don't mark it read on a specific date."
       ;; ... and add a read:.
       (nconc book (list (concat "read:"
 				(format-time-string "%Y-%m-%d")))))
-    (bookiez-write-database)))
+    (bookiez-write-database)
+    (vtable-update-object (vtable-current-table) book book)
+    (message "Marked %s as read" (nth 1 book))))
 
 (defun bookiez-display-books (author)
   (let ((inhibit-read-only t))
