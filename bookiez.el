@@ -420,10 +420,10 @@ If given a prefix, don't mark it read on a specific date."
      ;:column-colors '("#404040" "#202020")
      :columns '((:name "Cover")
 		(:name "Format")
-		(:name "Read")
-		(:name "Year" :primary t)
+		(:name "Status")
+		(:name "Published" :primary t)
 		(:name "Bought")
-		(:name "Read-Time")
+		(:name "Read")
 		(:name "Title" :min-width 80))
      :objects-function
      (lambda ()
@@ -451,10 +451,10 @@ If given a prefix, don't mark it read on a specific date."
     (make-vtable
      :row-colors '("#202020" "#000000")
      :columns '((:name "Format")
-		(:name "Read")
-		(:name "Year" :max-width 5)
+		(:name "Status")
+		(:name "Published" :max-width 5)
 		(:name "Bought" :max-width 5)
-		(:name "Read-Time" :min-width 12)
+		(:name "Read" :min-width 12)
 		(:name "Author" :max-width 25)
 		(:name "Title"))
      :objects-function (lambda () bookiez-books)
@@ -466,7 +466,7 @@ If given a prefix, don't mark it read on a specific date."
 (defun bookiez--formatter (value column table)
   (propertize
    (pcase (vtable-column table column)
-     ("Read-Time"
+     ("Read"
       (if (equal value "")
 	  ""
 	(string-clean-whitespace
@@ -475,7 +475,7 @@ If given a prefix, don't mark it read on a specific date."
 	  (encode-time
 	   (decoded-time-set-defaults
 	    (iso8601-parse-date value)))))))
-     ("Year"
+     ("Published"
        (if (equal value "1970-01-01")
 	   ""
 	 (substring value 0 4)))
@@ -505,15 +505,15 @@ If given a prefix, don't mark it read on a specific date."
        (if (equal format "paper")
 	   "📘"
 	 "📄"))
-      ("Read"
+      ("Status"
        (if (member "unread" read)
 	   "🟣"
 	 "✔️"))
-      ("Year"
+      ("Published"
        published-date)
       ("Bought"
        bought-date)
-      ("Read-Time"
+      ("Read"
        (or
 	(cl-loop for elem in read
 		 when (string-match "\\`read:\\(.*\\)" elem)
