@@ -37,17 +37,20 @@
   "If you do a lot of requests, put your key here to avoid rate limiting.")
 
 (defvar isbn-lookup-types
-  `(google
+  `(goodreads
+    google
     ,@(if isbn-isbndb-key '(isbndb))
     openlibrary
-    ,@(if isbn-librarything-key '(librarything))
-    goodreads)
-  "List of lookup engines to use, and the order to look up ISBNs in.")
+    ,@(if isbn-librarything-key '(librarything)))
+  "List of lookup engines to use, and the order to look up ISBNs in.
+The data sources to be preferred is listed towards the front of
+the list.")
 
 ;; General interface.
 
-(defun isbn-lookup (isbn)
-  "Return a list of author/title/year/thumbnail for ISBN."
+(defun isbn-lookup (isbn &optional all-results)
+  "Return a list of author/title/year/thumbnail for ISBN.
+If ALL-RESULTS, return the results from all providors."
   (let ((result (make-vector (length isbn-lookup-types) nil))
 	(index 0))
     ;; The idea here is that we ask all the different APIs in
@@ -58,31 +61,19 @@
 			   isbn result index)
 		  nil))
       (cl-incf index))
-    ;; Then we exit when we've got the first result.
-    (while (and (not (isbn-first-result result))
-		(isbn-first-living-buffer result))
-      (accept-process-output nil nil 100))
-    (isbn-first-result result)))
-
-(defun isbn-lookup-all (isbn)
-  "Same as `isbn-lookup', but return results from all providers."
-  (let ((result (make-vector (length isbn-lookup-types) nil))
-	(index 0))
-    (dolist (type isbn-lookup-types)
-      (aset result index
-	    (cons (funcall (intern (format "isbn-lookup-%s" type))
-			   isbn result index)
-		  nil))
-      (cl-incf index))
+    ;; Then we exit when we've got all the results (but don't wait
+    ;; more than 20 seconds).
     (cl-loop repeat 200
 	     while (isbn-first-living-buffer result)
 	     do (accept-process-output nil nil 100))
-    result))
+    (if all-results
+	(mapcar #'cdr result)
+      (isbn-first-result result))))
 
 (defun isbn-covers (isbn)
   "Return cover URLs for ISBN."
-  (cl-loop for result across (isbn-lookup-all isbn)
-	   for cover = (nth 4 result)
+  (cl-loop for result in (isbn-lookup isbn t)
+	   for cover = (nth 3 result)
 	   when cover
 	   collect cover))
 
