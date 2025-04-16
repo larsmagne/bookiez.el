@@ -256,13 +256,14 @@
   (when start-server
     (bookiez-start-server))
   (bookiez--possibly-read-database)
-  (pop-to-buffer "*Bookiez*")
+  (switch-to-buffer "*Bookiez*")
   (bookiez-mode)
   (bookiez-display-authors))
 
 (defvar-keymap bookiez-mode-map
   :parent vtable-map
   "RET" #'bookiez-show-author
+  "l" #'bookiez-list
   "a" #'bookiez-add-book-manually
   "c" #'bookiez-edit-author
   "i" #'bookiez-add-isbn
@@ -393,6 +394,7 @@ If given a prefix, don't mark it read on a specific date."
 (defvar-keymap bookiez-author-mode-map
   :parent vtable-map
   "RET" #'bookiez-author-display-book
+  "l" #'bookiez
   "A" #'bookiez-author-display-author
   "i" #'bookiez-add-isbn
   "a" #'bookiez-add-book-manually
