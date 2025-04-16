@@ -59,9 +59,17 @@
 
 (defvar-keymap bookiez-book-mode-map
   "a" #'bookiez-add-book-manually
+  "&" #'bookiez-book-goodreads
+  "l" #'bookiez
   "c" #'bookiez-book-edit)
 
 (defvar bookiez-book-isbn nil)
+
+(defun bookiez-book-goodreads ()
+  "Go to the Goodreads for the book."
+  (interactive)
+  (browse-url
+   (format "https://www.goodreads.com/search?q=%s" bookiez-book-isbn)))
 
 (defun bookiez-display-isbn-1 (isbn &optional save)
   (cl-destructuring-bind (title author date thumbnail)
@@ -265,9 +273,17 @@
   "RET" #'bookiez-show-author
   "l" #'bookiez-list
   "a" #'bookiez-add-book-manually
+  "&" #'bookiez-goodreads
   "c" #'bookiez-edit-author
   "i" #'bookiez-add-isbn
   "e" #'bookiez-add-ebook-manually)
+
+(defun bookiez-goodreads ()
+  "Go to the Goodreads for the author."
+  (interactive)
+  (browse-url
+   (format "https://www.goodreads.com/search?q=%s"
+	   (nth 1 (vtable-current-object)))))
 
 (defun bookiez-display-authors ()
   (let ((inhibit-read-only t))
