@@ -277,7 +277,7 @@
     (let ((table
 	   (make-vtable
 	    :columns '((:name "Books" :min-width 6)
-		       (:name "Name" :max-width 60))
+		       (:name "Author" :max-width 60))
 	    :objects-function
 	    (lambda ()
 	      (let ((authors (make-hash-table :test #'equal)))
