@@ -790,7 +790,11 @@ If given a prefix, don't mark it read on a specific date."
     (goto-char (point-max))
     (insert "\n")
     (dolist (comment comments)
-      (insert comment "\n"))
+      (let ((start (point)))
+	(insert comment "\n")
+	(save-restriction
+	  (narrow-to-region start (point))
+	  (fill-region (point-min) (point-max)))))
     (goto-char (point-min))))
 
 (defun bookiez-search-goodreads ()
