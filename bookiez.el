@@ -29,7 +29,7 @@
 
 (defun bookiez-thumbnail (thumbnail isbn)
   (if (and thumbnail
-	   (plusp (length thumbnail)))
+	   (cl-plusp (length thumbnail)))
       thumbnail
     (format "http://covers.librarything.com/devkey/%s/large/isbn/%s"
 	    isbn-librarything-key isbn)))
