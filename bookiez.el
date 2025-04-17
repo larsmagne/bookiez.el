@@ -277,6 +277,8 @@
   "&" #'bookiez-goodreads
   "c" #'bookiez-edit-author
   "i" #'bookiez-add-isbn
+  "SPC" #'bookiez-toggle-tracking
+  "n" #'bookiez-search-tracked-authors
   "e" #'bookiez-add-ebook-manually)
 
 (defun bookiez-goodreads ()
@@ -284,37 +286,49 @@
   (interactive)
   (browse-url
    (format "https://www.goodreads.com/search?q=%s"
-	   (nth 1 (vtable-current-object)))))
+	   (nth 2 (vtable-current-object)))))
+
+(define-multisession-variable bookiez-tracked-authors nil)
 
 (defun bookiez-display-authors ()
   (let ((inhibit-read-only t))
     (erase-buffer)
     (bookiez-mode)
     (setq truncate-lines t)
-    (let ((table
-	   (make-vtable
-	    :columns '((:name "Books" :min-width 6)
-		       (:name "Author" :max-width 60))
-	    :objects-function
-	    (lambda ()
-	      (let ((authors (make-hash-table :test #'equal)))
-		(dolist (book bookiez-books)
-		  (dolist (author (split-string (car book) ", "))
-		    (cl-incf (gethash author authors 0))))
-		(sort
-		 (let ((res nil))
-		   (maphash (lambda (k v)
-			      (push (list v k) res))
-			    authors)
-		   res)
-		 (lambda (a1 a2)
-		   (string< (cadr a1) (cadr a2))))))
-	    :keymap bookiez-mode-map)))
+    (let* ((tracked (multisession-value bookiez-tracked-authors))
+	   (table
+	    (make-vtable
+	     :columns '((:name "Tracked" :min-width 6)
+			(:name "Books" :min-width 6)
+			(:name "Author" :max-width 60))
+	     :getter
+	     (lambda (object column table)
+	       (pcase (vtable-column table column)
+		 ("Tracked"
+		  (if (car object) "✴️" ""))
+		 (_
+		  (elt object column))))
+	     :objects-function
+	     (lambda ()
+	       (let ((authors (make-hash-table :test #'equal)))
+		 (dolist (book bookiez-books)
+		   (dolist (author (split-string (car book) ", "))
+		     (cl-incf (gethash author authors 0))))
+		 (sort
+		  (let ((res nil))
+		    (maphash (lambda (k v)
+			       (push (list (member k tracked) v k)
+				     res))
+			     authors)
+		    res)
+		  (lambda (a1 a2)
+		    (string< (caddr a1) (caddr a2))))))
+	     :keymap bookiez-mode-map)))
       ;; This may not exist in all vtable versions.
       (when (fboundp 'vtable-comparitor)
 	(setf (vtable-comparitor table)
 	      (lambda (o1 o2)
-		(equal (cadr o1) (cadr o2))))))))
+		(equal (nth 2 o1) (nth 2 o2))))))))
 
 (defun bookiez-mark-as-read (&optional unknown-date)
   "Mark the book under point as read.
@@ -383,11 +397,56 @@ If given a prefix, don't mark it read on a specific date."
 		    (list (current-buffer) (point))
 		    t))))
 
+(defun bookiez-toggle-tracking ()
+  "Toggle whether to track the author under point."
+  (interactive)
+  (let* ((object (vtable-current-object))
+	 (author (nth 2 object)))
+    (setf (car object) (not (car object)))
+    (setf (multisession-value bookiez-tracked-authors)
+	  (delete author (multisession-value bookiez-tracked-authors)))
+    (when (car object)
+      (push author (multisession-value bookiez-tracked-authors)))
+    (vtable-update-object (vtable-current-table) object object)))
+
+(defun bookiez-search-tracked-authors (year)
+  "Search for new books from all tracked authors that are newer than YEAR."
+  (interactive "nSearch for book never than year: ")
+  (switch-to-buffer "*Bookiez Search*")
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (bookiez-search-mode)
+    (cl-destructuring-bind (data comments)
+	(bookiez-perplexity-author
+	 (multisession-value bookiez-tracked-authors)
+	 (concat (format "Only include books that are published after %s. "
+			 year)))
+      (make-vtable
+       :row-colors '("#404040" "#202020")
+       :divider-width 2
+       :columns '((:name "Author")
+		  (:name "Year" :primary t :max-width 10)
+		  (:name "Title" :max-width 40)
+		  (:name "Comment"))
+       :objects (mapcar (lambda (b)
+			  (list (nth 0 b) (nth 2 b) (nth 1 b) (nth 3 b)))
+			data)
+       :keymap bookiez-search-mode-map)
+      (goto-char (point-max))
+      (insert "\n")
+      (dolist (comment comments)
+	(let ((start (point)))
+	  (insert comment "\n\n")
+	  (save-restriction
+	    (narrow-to-region start (point))
+	    (fill-region (point-min) (point-max)))))
+      (goto-char (point-min)))))
+
 (defun bookiez-edit-author (name new-name)
   "Edit the author name under point."
-  (interactive (list (nth 1 (vtable-current-object))
+  (interactive (list (nth 2 (vtable-current-object))
 		     (read-string "New name: "
-				  (nth 1 (vtable-current-object)))))
+				  (nth 2 (vtable-current-object)))))
   (cl-loop for book in bookiez-books
 	   for authors = (split-string (car book) ", ")
 	   when (member name authors)
@@ -430,7 +489,7 @@ If given a prefix, don't mark it read on a specific date."
 
 (defun bookiez-show-author (author)
   "Show the data for AUTHOR."
-  (interactive (list (cadr (vtable-current-object))))
+  (interactive (list (nth 2 (vtable-current-object))))
   (switch-to-buffer "*Bookiez Author*")
   (let ((inhibit-read-only t))
     (erase-buffer)
@@ -730,10 +789,15 @@ If given a prefix, don't mark it read on a specific date."
   (let ((result
 	 (perplexity-query
 	  (concat
-	   "List all books published by " author
-	   " in chronological order.  "
+	   (if (consp author)
+	       (concat "List, in chronological order, "
+		       "all books published by the following authors: "
+		       (string-join author)
+		       ". ")
+	     (concat "List all books published by " author
+		     " in chronological order.  "))
 	   "For each book, include (in this order) "
-	   "the book name, the publication year, "
+	   "the author name, the book name, the publication year, "
 	   "and the type of book (i.e., novel, short story collection, etc), "
 	   "and use a semicolon as the separator. "
 	   "Do not number the responses. "
@@ -742,7 +806,7 @@ If given a prefix, don't mark it read on a specific date."
 	   "Do not include books that are just edited by the author. "
 	   (or extra-text "")))))
     (cl-loop for line in (string-lines result)
-	     if (string-match ";.*;" line)
+	     if (string-match ";.*;.*;" line)
 	     collect (split-string
 		      (replace-regexp-in-string "\\[[0-9]+\\]" "" line)
 		      "; *")
@@ -767,25 +831,23 @@ If given a prefix, don't mark it read on a specific date."
       (bookiez-perplexity-author author extra-text)
     (unless data
       (error "No data for %s" author))
-    (bookiez--search-author-render author data comments)))
+    (bookiez--search-author-render data comments)))
 
 (defun bookiez-search-author-new-books (author last-year)
   (cl-destructuring-bind (data comments) (bookiez-perplexity-author author)
     (unless data
       (error "No data for %s" author))
     (bookiez--search-author-render
-     author
      (cl-loop for (title year comment) in data
 	      when (> (string-to-number year) last-year)
 	      collect (list title year comment))
      comments)))
 
-(defun bookiez--search-author-render (author data comments)
+(defun bookiez--search-author-render (data comments)
   (switch-to-buffer "*Bookiez Search*")
   (let ((inhibit-read-only t))
     (erase-buffer)
     (bookiez-search-mode)
-    (setq-local bookiez-author author)
     (make-vtable
      :row-colors '("#404040" "#202020")
      :divider-width 2
@@ -793,8 +855,11 @@ If given a prefix, don't mark it read on a specific date."
 		(:name "Title" :max-width 40)
 		(:name "Comment"))
      :objects (mapcar (lambda (b)
-			(list (nth 1 b) (nth 0 b) (nth 2 b)))
+			(list (nth 0 b) (nth 2 b) (nth 1 b) (nth 3 b)))
 		      data)
+     :getter
+     (lambda (object column _table)
+       (nth (1+ column) object))
      :keymap bookiez-search-mode-map)
     (goto-char (point-max))
     (insert "\n")
@@ -811,23 +876,23 @@ If given a prefix, don't mark it read on a specific date."
   (interactive)
   (browse-url
    (format "https://www.goodreads.com/search?q=%s %s"
-	   bookiez-author
-	   (nth 1 (vtable-current-object)))))
+	   (nth 0 (vtable-current-object))
+	   (nth 2 (vtable-current-object)))))
   
 (defun bookiez-search-bookshop ()
   "Search Bookshop for the book under point."
   (interactive)
   (browse-url
    (format "https://bookshop.org/beta-search?keywords=%s %s"
-	   bookiez-author
-	   (nth 1 (vtable-current-object)))))
+	   (nth 0 (vtable-current-object))
+	   (nth 2 (vtable-current-object)))))
 
 (defun bookiez-search-biblio ()
   "Search Biblio for the book under point."
   (interactive)
   (browse-url
    (format "https://www.biblio.com/search.php?stage=1&title=%s %s"
-	   bookiez-author
-	   (nth 1 (vtable-current-object)))))
+	   (nth 0 (vtable-current-object))
+	   (nth 2 (vtable-current-object)))))
 
 (provide 'bookiez)
