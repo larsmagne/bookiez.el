@@ -487,7 +487,12 @@ If given a prefix, don't mark it read on a specific date."
        (cl-loop for book in bookiez-books
 		when (member author (split-string (nth 0 book) ", "))
 		collect (nth 1 book))
-       ", ")))))
+       ", ")
+      ;; Apparently, something like this is needed to make it shut up
+      ;; about what it's excluding.
+      "That is, if a book appeared on the preceding list, do not "
+      "include that in your output.  You do not need to mention that "
+      "you've excluded these books. "))))
 
 (defun bookiez-list ()
   "List all the books."
@@ -738,14 +743,18 @@ If given a prefix, don't mark it read on a specific date."
 	   (or extra-text "")))))
     (cl-loop for line in (string-lines result)
 	     if (string-match ";.*;" line)
-	     collect (split-string line "; ") into data
+	     collect (split-string
+		      (replace-regexp-in-string "\\[[0-9]+\\]" "" line)
+		      "; *")
+	     into data
 	     else
 	     collect line into comments
 	     finally (return (list data comments)))))
 
 (defvar-keymap bookiez-search-mode-map
   "&" #'bookiez-search-goodreads
-  "b" #'bookiez-search-bookshop)
+  "b" #'bookiez-search-bookshop
+  "u" #'bookiez-search-biblio)
 
 (define-derived-mode bookiez-search-mode special-mode "Bookiez"
   "Mode to search for books."
@@ -810,6 +819,14 @@ If given a prefix, don't mark it read on a specific date."
   (interactive)
   (browse-url
    (format "https://bookshop.org/beta-search?keywords=%s %s"
+	   bookiez-author
+	   (nth 1 (vtable-current-object)))))
+
+(defun bookiez-search-biblio ()
+  "Search Biblio for the book under point."
+  (interactive)
+  (browse-url
+   (format "https://www.biblio.com/search.php?stage=1&title=%s %s"
 	   bookiez-author
 	   (nth 1 (vtable-current-object)))))
 
