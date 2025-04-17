@@ -26,17 +26,19 @@
 (defun perplexity--query (query)
   (let ((url-request-method "POST")
         (url-request-data
-	 (json-serialize
-	  (perplexity--hash
-	   (list "model" "sonar")
-	   (list "messages"
-		 (vector
-		  (perplexity--hash
-		   (list "role" "system")
-		   (list "content" "Be precise and concise.  Do not include any emphasis, references or comments."))
-		  (perplexity--hash
-		   (list "role" "user")
-		   (list "content" query)))))))
+	 (encode-coding-string
+	  (json-serialize
+	   (perplexity--hash
+	    (list "model" "sonar")
+	    (list "messages"
+		  (vector
+		   (perplexity--hash
+		    (list "role" "system")
+		    (list "content" "Be precise and concise.  Do not include any emphasis, references or comments."))
+		   (perplexity--hash
+		    (list "role" "user")
+		    (list "content" query))))))
+	  'utf-8))
         (url-request-extra-headers
          `(("Connection" . "close")
            ("Content-Type" ."application/json")

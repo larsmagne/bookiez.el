@@ -314,8 +314,7 @@
       (when (fboundp 'vtable-comparitor)
 	(setf (vtable-comparitor table)
 	      (lambda (o1 o2)
-		(equal (cadr o1) (cadr o2))))))
-    (goto-char (point-min))))
+		(equal (cadr o1) (cadr o2))))))))
 
 (defun bookiez-mark-as-read (&optional unknown-date)
   "Mark the book under point as read.
@@ -454,8 +453,7 @@ If given a prefix, don't mark it read on a specific date."
 		   bookiez-books))
      :getter #'bookiez--get-book-data
      :formatter #'bookiez--formatter
-     :keymap bookiez-author-mode-map)
-    (goto-char (point-min))))
+     :keymap bookiez-author-mode-map)))
 
 (defun bookiez-author-display-author ()
   "Display the author of the book under point."
@@ -508,8 +506,7 @@ If given a prefix, don't mark it read on a specific date."
      :objects-function (lambda () bookiez-books)
      :getter #'bookiez--get-book-data
      :formatter #'bookiez--formatter
-     :keymap bookiez-author-mode-map)
-    (goto-char (point-min))))
+     :keymap bookiez-author-mode-map)))
 
 (defun bookiez--formatter (value column table)
   (propertize
@@ -740,7 +737,11 @@ If given a prefix, don't mark it read on a specific date."
 	   "Do not include books that are just edited by the author. "
 	   (or extra-text "")))))
     (cl-loop for line in (string-lines result)
-	     collect (split-string line "; "))))
+	     if (string-match ";.*;" line)
+	     collect (split-string line "; ") into data
+	     else
+	     collect line into comments
+	     finally (return (list data comments)))))
 
 (defvar-keymap bookiez-search-mode-map
   "&" #'bookiez-search-goodreads
@@ -753,22 +754,24 @@ If given a prefix, don't mark it read on a specific date."
 (defvar bookiez-author)
 
 (defun bookiez-search-author (author &optional extra-text)
-  (let ((data (bookiez-perplexity-author author extra-text)))
+  (cl-destructuring-bind (data comments)
+      (bookiez-perplexity-author author extra-text)
     (unless data
       (error "No data for %s" author))
-    (bookiez--search-author-render author data)))
+    (bookiez--search-author-render author data comments)))
 
 (defun bookiez-search-author-new-books (author last-year)
-  (let ((data (bookiez-perplexity-author author)))
+  (cl-destructuring-bind (data comments) (bookiez-perplexity-author author)
     (unless data
       (error "No data for %s" author))
     (bookiez--search-author-render
      author
      (cl-loop for (title year comment) in data
 	      when (> (string-to-number year) last-year)
-	      collect (list title year comment)))))
+	      collect (list title year comment))
+     comments)))
 
-(defun bookiez--search-author-render (author data)
+(defun bookiez--search-author-render (author data comments)
   (switch-to-buffer "*Bookiez Search*")
   (let ((inhibit-read-only t))
     (erase-buffer)
@@ -784,6 +787,10 @@ If given a prefix, don't mark it read on a specific date."
 			(list (nth 1 b) (nth 0 b) (nth 2 b)))
 		      data)
      :keymap bookiez-search-mode-map)
+    (goto-char (point-max))
+    (insert "\n")
+    (dolist (comment comments)
+      (insert comment "\n"))
     (goto-char (point-min))))
 
 (defun bookiez-search-goodreads ()
