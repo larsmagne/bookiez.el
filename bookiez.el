@@ -791,7 +791,7 @@ If given a prefix, don't mark it read on a specific date."
     (insert "\n")
     (dolist (comment comments)
       (let ((start (point)))
-	(insert comment "\n")
+	(insert comment "\n\n")
 	(save-restriction
 	  (narrow-to-region start (point))
 	  (fill-region (point-min) (point-max)))))
