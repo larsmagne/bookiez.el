@@ -33,7 +33,7 @@
 		 (vector
 		  (perplexity--hash
 		   (list "role" "system")
-		   (list "content" "Be precise and concise"))
+		   (list "content" "Be precise and concise.  Do not include any emphasis, references or comments."))
 		  (perplexity--hash
 		   (list "role" "user")
 		   (list "content" query)))))))

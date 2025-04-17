@@ -23,6 +23,7 @@
 (require 'svg)
 (require 'server)
 (require 'iso8601)
+(require 'perplexity)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
 
@@ -419,6 +420,9 @@ If given a prefix, don't mark it read on a specific date."
   "C" #'bookiez-author-edit-isin
   "r" #'bookiez-mark-as-read
   "DEL" #'bookiez-author-delete-book
+  "s" #'bookiez-author-search
+  "n" #'bookiez-author-search-new-books
+  "m" #'bookiez-author-search-missing-books
   "q" #'bury-buffer)
 
 (define-derived-mode bookiez-author-mode special-mode "Bookiez"
@@ -457,6 +461,35 @@ If given a prefix, don't mark it read on a specific date."
   "Display the author of the book under point."
   (interactive)
   (bookiez-show-author (nth 0 (vtable-current-object))))
+
+(defun bookiez-author-search ()
+  "Search for books by the author under point."
+  (interactive)
+  (bookiez-search-author (nth 0 (vtable-current-object))))
+
+(defun bookiez-author-search-new-books ()
+  "Search for new books by the author under point."
+  (interactive)
+  (let ((author (nth 0 (vtable-current-object))))
+    (bookiez-search-author-new-books
+     author
+     (cl-loop for book in bookiez-books
+	      when (member author (split-string (nth 0 book) ", "))
+	      maximize (string-to-number (substring (nth 3 book) 0 4))))))
+
+(defun bookiez-author-search-missing-books ()
+  "Search for missing books by the author under point."
+  (interactive)
+  (let ((author (nth 0 (vtable-current-object))))
+    (bookiez-search-author
+     author
+     (concat
+      "Do not include books from this list: "
+      (string-join
+       (cl-loop for book in bookiez-books
+		when (member author (split-string (nth 0 book) ", "))
+		collect (nth 1 book))
+       ", ")))))
 
 (defun bookiez-list ()
   "List all the books."
@@ -666,6 +699,20 @@ If given a prefix, don't mark it read on a specific date."
 	     (sleep-for 2)))
   (bookiez-write-database))
 
+(defvar bookiez-goodreads-data (make-hash-table :test #'equal))
+
+(defun bookiez-get-goodreads-data ()
+  (let ((isbn-lookup-types '(goodreads)))
+    (cl-loop for i from 1
+	     for book in bookiez-books
+	     for isbn = (nth 2 book)
+	     when (isbn-valid-p isbn)
+	     do
+	     (message "Querying %d %s" i (nth 1 book))
+	     (when-let ((data (isbn-lookup isbn)))
+	       (setf (gethash isbn bookiez-goodreads-data) data))
+	     (sleep-for 2))))
+
 (defun bookiez-list-duplicate-isbn ()
   (pop-to-buffer "*duplicates*")
   (erase-buffer)
@@ -676,5 +723,83 @@ If given a prefix, don't mark it read on a specific date."
 	  (insert (format "%s %s -> %s %s\n" (nth 0 other) (nth 1 other)
 			  (nth 0 book) (nth 1 book))))
 	(setf (gethash isbn table) book)))))
+
+(defun bookiez-perplexity-author (author &optional extra-text)
+  (let ((result
+	 (perplexity-query
+	  (concat
+	   "List all books published by " author
+	   " in chronological order.  "
+	   "For each book, include (in this order) "
+	   "the book name, the publication year, "
+	   "and the type of book (i.e., novel, short story collection, etc), "
+	   "and use a semicolon as the separator. "
+	   "Do not number the responses. "
+	   "Do not include omnibus editions. "
+	   "Only include books where the author is the main contributor. "
+	   "Do not include books that are just edited by the author. "
+	   (or extra-text "")))))
+    (cl-loop for line in (string-lines result)
+	     collect (split-string line "; "))))
+
+(defvar-keymap bookiez-search-mode-map
+  "&" #'bookiez-search-goodreads
+  "b" #'bookiez-search-bookshop)
+
+(define-derived-mode bookiez-search-mode special-mode "Bookiez"
+  "Mode to search for books."
+  (setq truncate-lines t))
+
+(defvar bookiez-author)
+
+(defun bookiez-search-author (author &optional extra-text)
+  (let ((data (bookiez-perplexity-author author extra-text)))
+    (unless data
+      (error "No data for %s" author))
+    (bookiez--search-author-render author data)))
+
+(defun bookiez-search-author-new-books (author last-year)
+  (let ((data (bookiez-perplexity-author author)))
+    (unless data
+      (error "No data for %s" author))
+    (bookiez--search-author-render
+     author
+     (cl-loop for (title year comment) in data
+	      when (> (string-to-number year) last-year)
+	      collect (list title year comment)))))
+
+(defun bookiez--search-author-render (author data)
+  (switch-to-buffer "*Bookiez Search*")
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (bookiez-search-mode)
+    (setq-local bookiez-author author)
+    (make-vtable
+     :row-colors '("#404040" "#202020")
+     :divider-width 2
+     :columns '((:name "Year" :primary t :max-width 10)
+		(:name "Title" :max-width 40)
+		(:name "Comment"))
+     :objects (mapcar (lambda (b)
+			(list (nth 1 b) (nth 0 b) (nth 2 b)))
+		      data)
+     :keymap bookiez-search-mode-map)
+    (goto-char (point-min))))
+
+(defun bookiez-search-goodreads ()
+  "Search Goodreads for the book under point."
+  (interactive)
+  (browse-url
+   (format "https://www.goodreads.com/search?q=%s %s"
+	   bookiez-author
+	   (nth 1 (vtable-current-object)))))
+  
+(defun bookiez-search-bookshop ()
+  "Search Bookshop for the book under point."
+  (interactive)
+  (browse-url
+   (format "https://bookshop.org/beta-search?keywords=%s %s"
+	   bookiez-author
+	   (nth 1 (vtable-current-object)))))
 
 (provide 'bookiez)
