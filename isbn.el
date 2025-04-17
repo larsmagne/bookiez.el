@@ -27,9 +27,6 @@
 (require 'browse-url)
 (require 'time-date)
 
-(defvar isbn-isbndb-key nil
-  "To use the isbndb lookup, get a developer key.")
-
 (defvar isbn-librarything-key nil
   "To use the LibraryThing lookup, get a developer key.")
 
@@ -39,7 +36,6 @@
 (defvar isbn-lookup-types
   `(goodreads
     google
-    ,@(if isbn-isbndb-key '(isbndb))
     openlibrary
     ,@(if isbn-librarything-key '(librarything)))
   "List of lookup engines to use, and the order to look up ISBNs in.
@@ -144,44 +140,6 @@ If ALL-RESULTS, return the results from all providors."
 	(setcdr (aref vector index)
 		(list title author date thumbnail isbn)))))
   (kill-buffer (current-buffer)))
-
-;;; ISBNDB support
-
-(defun isbn-lookup-isbndb (isbn vector index)
-  (url-retrieve
-   (format "http://isbndb.com/api/books.xml?access_key=%s&results=details&index1=isbn&value1=%s"
-	   isbn-isbndb-key
-	   isbn)
-   'isbn-parse-isbndb
-   (list vector index) t))
-
-(defun isbn-parse-isbndb (_status vector index)
-  (goto-char (point-min))
-  (when (search-forward "\n\n" nil t)
-    (let* ((data (libxml-parse-xml-region (point) (point-max)))
-	   (entry (assq 'BookData (assq 'BookList (cdr data))))
-	   (author (isbn-isbndb-author
-		    (nth 2 (assq 'AuthorsText entry)))))
-      (when (and (nth 2 (assq 'Title entry))
-		 author)
-	(setcdr (aref vector index )
-		(list (nth 2 (assq 'Title entry))
-		      author
-		      (isbn-isbndb-date
-		       (cdr (assq 'edition_info (cadr (assq 'Details entry)))))
-		      nil)))))
-  (kill-buffer (current-buffer)))
-
-(defun isbn-isbndb-date (string)
-  ;; The edition info looks like "Paperback; 1986-11-01".
-  (when (and string
-	     (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]" string))
-    (match-string 0 string)))
-
-(defun isbn-isbndb-author (string)
-  (when string
-    (setq string (replace-regexp-in-string ", $" "" string)))
-  string)
 
 ;;; OpenLibrary API
 
