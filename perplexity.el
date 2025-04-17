@@ -10,12 +10,30 @@
 
 ;;; Commentary:
 
+;; Usage: Get an API key from perplexity.ai and:
+
+;; (setq perplexity-key "API_KEY")
+;;
+;; Then query away:
+;;
+;; (perplexity-query "What is one plus two? ")
+;; => "One plus two equals three."
+
 ;;; Code:
 
 (require 'url)
 
 (defvar perplexity-key nil
   "API key for Perplexity.")
+
+(defun perplexity-query (query)
+  "Send QUERY to Perplexity.ai.
+`perplexity-key' has to be set to the API key first."
+  (unless perplexity-key
+    (error "`perplexity-key' is not set"))
+  (gethash "content"
+	   (gethash "message"
+		    (elt (gethash "choices" (perplexity--query query)) 0))))
 
 (defun perplexity--hash (&rest values)
   (cl-loop with table = (make-hash-table :test #'equal)
@@ -29,7 +47,7 @@
 	 (encode-coding-string
 	  (json-serialize
 	   (perplexity--hash
-	    (list "model" "sonar")
+	    (list "model" "sonar-pro")
 	    (list "messages"
 		  (vector
 		   (perplexity--hash
@@ -47,15 +65,10 @@
     (with-current-buffer (url-retrieve-synchronously
 			  "https://api.perplexity.ai/chat/completions")
       (goto-char (point-min))
-      (prog1
+      (unwind-protect
 	  (and (search-forward "\n\n" nil t)
 	       (json-parse-buffer))
 	(kill-buffer (current-buffer))))))
-
-(defun perplexity-query (query)
-  (let ((result (perplexity--query query)))
-    (gethash "content" (gethash "message"
-				(elt (gethash "choices" result) 0)))))
 
 (provide 'perplexity)
 
