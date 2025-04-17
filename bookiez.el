@@ -792,7 +792,7 @@ If given a prefix, don't mark it read on a specific date."
 	   (if (consp author)
 	       (concat "List, in chronological order, "
 		       "all books published by the following authors: "
-		       (string-join author)
+		       (string-join author ", ")
 		       ". ")
 	     (concat "List all books published by " author
 		     " in chronological order.  "))
