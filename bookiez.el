@@ -488,7 +488,7 @@ If given a prefix, don't mark it read on a specific date."
   "a" #'bookiez-add-book-manually
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
-  "C" #'bookiez-author-edit-isin
+  "C" #'bookiez-author-edit-all-data
   "r" #'bookiez-mark-as-read
   "u" #'bookiez-mark-as-skipped
   "DEL" #'bookiez-author-delete-book
@@ -687,18 +687,19 @@ If given a prefix, don't mark it read on a specific date."
     (forward-line 1)
     (vtable-revert-command)))
 
-(defun bookiez-author-edit-isin ()
-  "Edit the ISBN of the book under point."
+(defun bookiez-author-edit-all-data ()
+  "Edit all the data of the book under point."
   (interactive)
-  (let* ((current (vtable-current-object))
-	 (isbn (read-string "New ISBN: ")))
-    (cl-loop for book in bookiez-books
-	     when (eq current book)
-	     do
-	     (setf (nth 2 book) isbn)
-	     (when-let ((urls (isbn-covers isbn)))
-	       (setf (nth 5 book) (car urls))
-	       (bookiez-cache-image isbn (car urls))))
+  (let ((book (vtable-current-object)))
+    (cl-loop for slot in '("Author" "Title" "ISBN"
+			   "Published Date" "Bought Date"
+			   "Thumbnail" "Format")
+	     for n from 0
+	     do (setf (nth n book)
+		      (read-string (concat slot ": ") (nth n book))))
+    (when-let ((urls (isbn-covers (nth 2 book))))
+      (setf (nth 5 book) (car urls))
+      (bookiez-cache-image (nth 2 book) (car urls)))
     (bookiez-write-database)))
 
 (defun bookiez-fill-isbn ()
