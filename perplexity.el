@@ -47,7 +47,7 @@
 	 (encode-coding-string
 	  (json-serialize
 	   (perplexity--hash
-	    (list "model" "sonar")
+	    (list "model" "sonar-pro")
 	    (list "messages"
 		  (vector
 		   (perplexity--hash
@@ -66,7 +66,7 @@
 	   ("Accept" . "application/json")
 	   ("Authorization" . ,(format "Bearer %s" perplexity-key)))))
     (with-current-buffer (url-retrieve-synchronously
-			  "https://api.perplexity.ai/chat/completions")
+			  "https://api.perplexity.ai/chat/completions" t)
       (goto-char (point-min))
       (unwind-protect
 	  (and (search-forward "\n\n" nil t)
