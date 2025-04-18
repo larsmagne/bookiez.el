@@ -231,6 +231,19 @@ If ALL-RESULTS, return the results from all providors."
 				(gethash "image" book)))))
 	 (kill-buffer (current-buffer)))))))
 
+(defun isbn-author-isbndb (author)
+  (let ((url-request-extra-headers
+         `(("Authorization" . ,isbn-isbndb-key))))
+    (with-current-buffer
+	(url-retrieve-synchronously
+	 (format "https://api2.isbndb.com/author/%s?pageSize=2000" author))
+      (goto-char (point-min))
+      (unwind-protect
+	  (and (search-forward "\n\n" nil t)
+	       (let ((json (json-parse-buffer)))
+		 (setq j2 json)))
+	(kill-buffer (current-buffer))))))
+
 ;;; Goodreads search.
 
 (defun isbn-lookup-goodreads (isbn vector index)
