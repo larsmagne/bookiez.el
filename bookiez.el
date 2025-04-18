@@ -331,7 +331,12 @@
 	      (lambda (o1 o2)
 		(equal (nth 2 o1) (nth 2 o2))))))))
 
-(defun bookiez-mark-as-read (&optional unknown-date)
+(defun bookiez-mark-as-skipped ()
+  "Mark the book under point as skipped."
+  (interactive)
+  (bookiez-mark-as-read nil "skipped"))
+
+(defun bookiez-mark-as-read (&optional unknown-date read-prefix)
   "Mark the book under point as read.
 If given a prefix, don't mark it read on a specific date."
   (interactive "P")
@@ -345,7 +350,8 @@ If given a prefix, don't mark it read on a specific date."
       (setcdr (nthcdr 6 book)
 	      (delete "unread" (nthcdr 7 book)))
       ;; ... and add a read:.
-      (nconc book (list (concat "read:"
+      (nconc book (list (format "%s:%s"
+				(or read-prefix "read")
 				(format-time-string "%Y-%m-%d")))))
     (bookiez-write-database)
     (vtable-update-object (vtable-current-table) book book)
@@ -484,6 +490,7 @@ If given a prefix, don't mark it read on a specific date."
   "c" #'bookiez-author-edit-book
   "C" #'bookiez-author-edit-isin
   "r" #'bookiez-mark-as-read
+  "u" #'bookiez-mark-as-skipped
   "DEL" #'bookiez-author-delete-book
   "s" #'bookiez-author-search
   "n" #'bookiez-author-search-new-books
@@ -622,9 +629,14 @@ If given a prefix, don't mark it read on a specific date."
 	   "📘"
 	 "📄"))
       ("Status"
-       (if (member "unread" read)
-	   "🟣"
-	 "✔️"))
+       (cond ((member "unread" read)
+	      "🟣")
+	     ((cl-loop for elem in read
+		       when (string-match-p "\\`skipped:" elem)
+		       return t)
+	      "❌")
+	     (t
+	      "✔️")))
       ("Published"
        published-date)
       ("Bought"
@@ -632,8 +644,8 @@ If given a prefix, don't mark it read on a specific date."
       ("Read"
        (or
 	(cl-loop for elem in read
-		 when (string-match "\\`read:\\(.*\\)" elem)
-		 return (match-string 1 elem))
+		 when (string-match "\\`\\(read\\|skipped\\):\\(.*\\)" elem)
+		 return (match-string 2 elem))
 	""))
       ("Author"
        author)
