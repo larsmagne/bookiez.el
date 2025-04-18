@@ -414,34 +414,40 @@ If given a prefix, don't mark it read on a specific date."
   "Search for new books from all tracked authors that are newer than YEAR."
   (interactive "nSearch for book never than year: ")
   (switch-to-buffer "*Bookiez Search*")
-  (let ((inhibit-read-only t))
+  (let ((inhibit-read-only t)
+	data comments)
     (erase-buffer)
     (bookiez-search-mode)
-    (cl-destructuring-bind (data comments)
-	(bookiez-perplexity-author
-	 (multisession-value bookiez-tracked-authors)
-	 (concat (format "Only include books that are published after %s. "
-			 year)))
-      (make-vtable
-       :row-colors '("#404040" "#202020")
-       :divider-width 2
-       :columns '((:name "Author")
-		  (:name "Year" :primary t :max-width 10)
-		  (:name "Title" :max-width 40)
-		  (:name "Comment"))
-       :objects (mapcar (lambda (b)
-			  (list (nth 0 b) (nth 2 b) (nth 1 b) (nth 3 b)))
-			data)
-       :keymap bookiez-search-mode-map)
-      (goto-char (point-max))
-      (insert "\n")
-      (dolist (comment comments)
-	(let ((start (point)))
-	  (insert comment "\n\n")
-	  (save-restriction
-	    (narrow-to-region start (point))
-	    (fill-region (point-min) (point-max)))))
-      (goto-char (point-min)))))
+    (dolist (author (multisession-value bookiez-tracked-authors))
+      (message "Querying %s..." author)
+      (cl-destructuring-bind (adata acomments)
+	  (bookiez-perplexity-author
+	   author
+	   (format "Only include books that are published after %s. If there are no books from this author published after %s, don't output anything."
+		   year year))
+	(setq data (append data adata)
+	      comments (append comments acomments))))
+    (clear-minibuffer-message)
+    (make-vtable
+     :row-colors '("#404040" "#202020")
+     :divider-width 2
+     :columns '((:name "Author" :primary t)
+		(:name "Year" :max-width 10)
+		(:name "Title" :max-width 40)
+		(:name "Comment"))
+     :objects (mapcar (lambda (b)
+			(list (nth 0 b) (nth 2 b) (nth 1 b) (nth 3 b)))
+		      data)
+     :keymap bookiez-search-mode-map)
+    (goto-char (point-max))
+    (insert "\n")
+    (dolist (comment (delete "" comments))
+      (let ((start (point)))
+	(insert comment "\n\n")
+	(save-restriction
+	  (narrow-to-region start (point))
+	  (fill-region (point-min) (point-max)))))
+    (goto-char (point-min))))
 
 (defun bookiez-edit-author (name new-name)
   "Edit the author name under point."
