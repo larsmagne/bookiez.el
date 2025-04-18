@@ -30,6 +30,9 @@
 (defvar isbn-librarything-key nil
   "To use the LibraryThing lookup, get a developer key.")
 
+(defvar isbn-isbndb-key nil
+  "To use the isbndb lookup, get an access key.")
+
 (defvar isbn-google-key nil
   "If you do a lot of requests, put your key here to avoid rate limiting.")
 
@@ -37,6 +40,7 @@
   `(goodreads
     google
     openlibrary
+    ,@(if isbn-isbndb-key '(isbndb))
     ,@(if isbn-librarything-key '(librarything)))
   "List of lookup engines to use, and the order to look up ISBNs in.
 The data sources to be preferred is listed towards the front of
@@ -202,6 +206,30 @@ If ALL-RESULTS, return the results from all providors."
 		      "1970-01-01"
 		      nil)))))
   (kill-buffer (current-buffer)))
+
+;;; ISBNdb API.
+
+(defun isbn-lookup-isbndb (isbn vector index)
+  (let ((url-request-extra-headers
+         `(("Authorization" . ,isbn-isbndb-key))))
+    (url-retrieve
+     (format "https://api2.isbndb.com/book/%s" isbn)
+     (lambda (_)
+       (goto-char (point-min))
+       (unwind-protect
+	   (and (search-forward "\n\n" nil t)
+		(let* ((json (json-parse-buffer))
+		       (book (gethash "book" json)))
+		  (setcdr (aref vector index)
+			  (list (string-join
+				 (cl-loop for author across
+					  (gethash "authors" book)
+					  collect author)
+				 ", ")
+				(gethash "title" book)
+				(gethash "date_published" book)
+				(gethash "image" book)))))
+	 (kill-buffer (current-buffer)))))))
 
 ;;; Goodreads search.
 
