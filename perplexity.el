@@ -31,9 +31,11 @@
 `perplexity-key' has to be set to the API key first."
   (unless perplexity-key
     (error "`perplexity-key' is not set"))
-  (gethash "content"
-	   (gethash "message"
-		    (elt (gethash "choices" (perplexity--query query)) 0))))
+  (let* ((message (perplexity--query query))
+	 (data (elt (gethash "choices" message) 0)))
+    (unless data
+      (error "Error: %s" (gethash "message" (gethash "error" message))))
+    (gethash "content" (gethash "message" data))))
 
 (defun perplexity--hash (&rest values)
   (cl-loop with table = (make-hash-table :test #'equal)
