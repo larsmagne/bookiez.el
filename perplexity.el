@@ -47,11 +47,14 @@
 	 (encode-coding-string
 	  (json-serialize
 	   (perplexity--hash
-	    (list "model" "sonar-pro")
+	    (list "model" "sonar")
 	    (list "messages"
 		  (vector
 		   (perplexity--hash
 		    (list "role" "system")
+		    (list "web_search_options"
+			  (perplexity--hash
+			   (list "search_context_size" "high")))
 		    (list "content" "Be precise and concise.  Do not include any emphasis, references or comments."))
 		   (perplexity--hash
 		    (list "role" "user")
