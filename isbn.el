@@ -12,7 +12,7 @@
 ;;; Commentary:
 
 ;; isbn.el is a library for looking up ISBNs via various sources.
-;; Currently supported are Google Books, LibraryThing, isbndb and
+;; Currently supported are Google Books, isbndb and
 ;; OpenLibrary.  Some of the methods requires getting a developer key.
 
 ;; Usage:
@@ -27,9 +27,6 @@
 (require 'browse-url)
 (require 'time-date)
 
-(defvar isbn-librarything-key nil
-  "To use the LibraryThing lookup, get a developer key.")
-
 (defvar isbn-isbndb-key nil
   "To use the isbndb lookup, get an access key.")
 
@@ -40,8 +37,7 @@
   `(goodreads
     google
     openlibrary
-    ,@(if isbn-isbndb-key '(isbndb))
-    ,@(if isbn-librarything-key '(librarything)))
+    ,@(if isbn-isbndb-key '(isbndb)))
   "List of lookup engines to use, and the order to look up ISBNs in.
 The data sources to be preferred is listed towards the front of
 the list.")
@@ -181,30 +177,6 @@ If ALL-RESULTS, return the results from all providors."
 	(when (and title author)
 	  (setcdr (aref vector index)
 		  (list title author date thumbnail))))))
-  (kill-buffer (current-buffer)))
-
-;;; LibraryThing API
-
-(defun isbn-lookup-librarything (isbn vector index)
-  (url-retrieve
-   (format "http://www.librarything.com/services/rest/1.1/?method=librarything.ck.getwork&isbn=%s&apikey=%s"
-	   isbn
-	   isbn-librarything-key)
-   'isbn-parse-librarything
-   (list vector index) t))
-
-(defun isbn-parse-librarything (_status vector index)
-  (goto-char (point-min))
-  (when (search-forward "\n\n" nil t)
-    (let* ((data (libxml-parse-xml-region (point) (point-max)))
-	   (entry (assq 'item (assq 'ltml (cdr data)))))
-      (when (and (nth 2 (assq 'title entry))
-		 (nth 2 (assq 'author entry)))
-	(setcdr (aref vector index)
-		(list (nth 2 (assq 'title entry))
-		      (nth 2 (assq 'author entry))
-		      "1970-01-01"
-		      nil)))))
   (kill-buffer (current-buffer)))
 
 ;;; ISBNdb API.
