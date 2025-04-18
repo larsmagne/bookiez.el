@@ -845,6 +845,20 @@ If given a prefix, don't mark it read on a specific date."
 
 (defvar bookiez-author)
 
+(defun bookiez-search-author-isbndb ()
+  (interactive)
+  (let ((author (nth 0 (vtable-current-object))))
+    (bookiez--search-author-render
+     (cl-loop for book across (gethash "books" (isbn-author-isbndb author))
+	      collect (list author
+			    (gethash "title" book)
+			    (let ((date (gethash "date_published" book)))
+			      (if date
+				  (string-to-number (substring date 0 4))
+				0))
+			    (gethash "language" book)))
+     nil)))
+
 (defun bookiez-search-author (author &optional extra-text)
   (cl-destructuring-bind (data comments)
       (bookiez-perplexity-author author extra-text)
