@@ -190,8 +190,8 @@ If ALL-RESULTS, return the results from all providors."
        (goto-char (point-min))
        (unwind-protect
 	   (and (search-forward "\n\n" nil t)
-		(let* ((json (json-parse-buffer))
-		       (book (gethash "book" json)))
+		(when-let* ((json (json-parse-buffer))
+			    (book (gethash "book" json)))
 		  (setcdr (aref vector index)
 			  (list (string-join
 				 (cl-loop for author across
