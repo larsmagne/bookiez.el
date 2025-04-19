@@ -358,6 +358,18 @@ If given a prefix, don't mark it read on a specific date."
     (vtable-update-object (vtable-current-table) book book)
     (message "Marked %s as read" (nth 1 book))))
 
+(defun bookiez-mark-as-unread ()
+  "Mark the book under point as unread."
+  (interactive)
+  (let ((book (vtable-current-object)))
+    (unless book
+      (error "No book on the current line"))
+    ;; Remove the previous data (if any) and mark as unread.
+    (setcdr (nthcdr 6 book) (list "unread"))
+    (bookiez-write-database)
+    (vtable-update-object (vtable-current-table) book book)
+    (message "Marked %s as unread" (nth 1 book))))
+
 (defun bookiez-display-books (author)
   (let ((inhibit-read-only t))
     (erase-buffer)
@@ -498,7 +510,8 @@ If given a prefix, don't mark it read on a specific date."
   "c" #'bookiez-author-edit-book
   "C" #'bookiez-author-edit-all-data
   "r" #'bookiez-mark-as-read
-  "u" #'bookiez-mark-as-skipped
+  "u" #'bookiez-mark-as-unread
+  "k" #'bookiez-mark-as-skipped
   "DEL" #'bookiez-author-delete-book
   "s" #'bookiez-author-search
   "n" #'bookiez-author-search-new-books
