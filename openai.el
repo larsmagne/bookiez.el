@@ -33,7 +33,6 @@
     (error "`openai-key' is not set"))
   (let* ((message (openai--query query))
 	 (error (cdr (assq 'error message))))
-    (setq m message)
     (if (not (eq error :null))
 	(error "Error: %s" (cdr (assq 'message error)))
       (cdr (assq 'text (elt (cdr (assq 'content
