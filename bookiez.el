@@ -24,6 +24,7 @@
 (require 'server)
 (require 'iso8601)
 (require 'perplexity)
+(require 'openai)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
 
@@ -424,27 +425,34 @@ If given a prefix, don't mark it read on a specific date."
 	data comments)
     (erase-buffer)
     (bookiez-search-mode)
-    (dolist (author (multisession-value bookiez-tracked-authors))
-      (message "Querying %s..." author)
-      (cl-destructuring-bind (adata acomments)
-	  (bookiez-perplexity-author
-	   author
-	   (format "Only include books that are published after %s. If there are no books from this author published after %s, don't output anything."
-		   year year))
-	(setq data (append data adata)
-	      comments (append comments acomments))))
+    (if (eq bookiez-assistant-function 'perplexity-query)
+	(dolist (author (multisession-value bookiez-tracked-authors))
+	  (message "Querying %s..." author)
+	  (cl-destructuring-bind (adata acomments)
+	      (bookiez-query-assistant-author
+	       author
+	       (format "Only include books that are published after %s. If there are no books from this author published after %s, don't output anything."
+		       year year))
+	    (setq data (append data adata)
+		  comments (append comments acomments))))
+      (cl-multiple-value-setq (data comments)
+	(bookiez-query-assistant-author
+	 (multisession-value bookiez-tracked-authors)
+	 (format "Only include books that are published after %s. If there are no books from this author published after %s, don't output anything."
+		 year year))))
     (clear-minibuffer-message)
-    (make-vtable
-     :row-colors '("#404040" "#202020")
-     :divider-width 2
-     :columns '((:name "Author" :primary t)
-		(:name "Year" :max-width 10)
-		(:name "Title" :max-width 40)
-		(:name "Comment"))
-     :objects (mapcar (lambda (b)
-			(list (nth 0 b) (nth 2 b) (nth 1 b) (nth 3 b)))
-		      data)
-     :keymap bookiez-search-mode-map)
+    (when data
+      (make-vtable
+       :row-colors '("#404040" "#202020")
+       :divider-width 2
+       :columns '((:name "Author" :primary t)
+		  (:name "Year" :max-width 10)
+		  (:name "Title" :max-width 40)
+		  (:name "Comment"))
+       :objects (mapcar (lambda (b)
+			  (list (nth 0 b) (nth 2 b) (nth 1 b) (nth 3 b)))
+			data)
+       :keymap bookiez-search-mode-map))
     (goto-char (point-max))
     (insert "\n")
     (dolist (comment (delete "" comments))
@@ -805,9 +813,13 @@ If given a prefix, don't mark it read on a specific date."
 			  (nth 0 book) (nth 1 book))))
 	(setf (gethash isbn table) book)))))
 
-(defun bookiez-perplexity-author (author &optional extra-text)
+(defvar bookiez-assistant-function 'perplexity-query
+  "Function to retrieve data from an assistant.")
+
+(defun bookiez-query-assistant-author (author &optional extra-text)
   (let ((result
-	 (perplexity-query
+	 (funcall
+	  bookiez-assistant-function
 	  (concat
 	   (if (consp author)
 	       (concat "List, in chronological order, "
@@ -833,7 +845,7 @@ If given a prefix, don't mark it read on a specific date."
 	     into data
 	     else
 	     collect line into comments
-	     finally (return (list data comments)))))
+	     finally (cl-return (list data comments)))))
 
 (defvar-keymap bookiez-search-mode-map
   "&" #'bookiez-search-goodreads
@@ -862,13 +874,13 @@ If given a prefix, don't mark it read on a specific date."
 
 (defun bookiez-search-author (author &optional extra-text)
   (cl-destructuring-bind (data comments)
-      (bookiez-perplexity-author author extra-text)
+      (bookiez-query-assistant-author author extra-text)
     (unless data
       (error "No data for %s" author))
     (bookiez--search-author-render data comments)))
 
 (defun bookiez-search-author-new-books (author last-year)
-  (cl-destructuring-bind (data comments) (bookiez-perplexity-author author)
+  (cl-destructuring-bind (data comments) (bookiez-query-assistant-author author)
     (unless data
       (error "No data for %s" author))
     (bookiez--search-author-render
@@ -882,19 +894,20 @@ If given a prefix, don't mark it read on a specific date."
   (let ((inhibit-read-only t))
     (erase-buffer)
     (bookiez-search-mode)
-    (make-vtable
-     :row-colors '("#404040" "#202020")
-     :divider-width 2
-     :columns '((:name "Year" :primary t :max-width 10)
-		(:name "Title" :max-width 40)
-		(:name "Comment"))
-     :objects (mapcar (lambda (b)
-			(list (nth 0 b) (nth 2 b) (nth 1 b) (nth 3 b)))
-		      data)
-     :getter
-     (lambda (object column _table)
-       (nth (1+ column) object))
-     :keymap bookiez-search-mode-map)
+    (when data
+      (make-vtable
+       :row-colors '("#404040" "#202020")
+       :divider-width 2
+       :columns '((:name "Year" :primary t :max-width 10)
+		  (:name "Title" :max-width 40)
+		  (:name "Comment"))
+       :objects (mapcar (lambda (b)
+			  (list (nth 0 b) (nth 2 b) (nth 1 b) (nth 3 b)))
+			data)
+       :getter
+       (lambda (object column _table)
+	 (nth (1+ column) object))
+       :keymap bookiez-search-mode-map))
     (goto-char (point-max))
     (insert "\n")
     (dolist (comment comments)
