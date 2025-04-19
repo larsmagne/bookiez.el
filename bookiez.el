@@ -23,20 +23,14 @@
 (require 'svg)
 (require 'server)
 (require 'iso8601)
-(require 'perplexity)
-(require 'openai)
+(require 'query-assistant)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
-
-(defun bookiez-thumbnail (thumbnail isbn)
-  (if (and thumbnail
-	   (cl-plusp (length thumbnail)))
-      thumbnail
-    (format "http://covers.librarything.com/devkey/%s/large/isbn/%s"
-	    isbn-librarything-key isbn)))
-
 (defvar bookiez-last-isbn nil)
 (defvar bookiez-books nil)
+
+(defvar bookiez-assistant 'perplexity
+  "What assistant to use.")
 
 (defun bookiez-display-isbn (isbn &optional save)
   (when save
@@ -91,15 +85,10 @@
 	(insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
 	(let ((file (expand-file-name (format "%s.jpg" isbn)
 				      "~/.emacs.d/bookiez-cache/")))
-	  (if (file-exists-p file)
-	      (progn
-		(insert-image (create-image file nil nil :max-width 800
-					    :max-height 800))
-		(insert "\n"))
-	    (url-retrieve (bookiez-thumbnail thumbnail isbn)
-			  'bookiez-image-fetched
-			  (list (current-buffer) (point))
-			  t)))
+	  (when (file-exists-p file)
+	    (insert-image (create-image file nil nil :max-width 800
+					:max-height 800))
+	    (insert "\n")))
 	(goto-char (point-min))
 	(setq bookiez-last-isbn nil)
 	(bookiez-play "61-KREVmorse .mp3")
@@ -168,19 +157,6 @@
 		      (y-or-n-p "Book read? "))
     (bookiez-cache-image isbn thumb)
     (setq bookiez-last-isbn nil)))
-
-(defun bookiez-image-fetched (_status buffer point)
-  (goto-char (point-min))
-  (when (or (search-forward "\n\n" nil t)
-	    (search-forward "\r\n\r\n" nil t))
-    (let ((image (buffer-substring (point) (point-max))))
-      (kill-buffer (current-buffer))
-      (with-current-buffer buffer
-	(let ((inhibit-read-only t))
-	  (when-let ((im (create-image image nil t)))
-	    (save-excursion
-	      (goto-char point)
-	      (insert-image im "*"))))))))
 
 (defun bookiez-start-server ()
   (setq server-use-tcp t
@@ -370,26 +346,6 @@ If given a prefix, don't mark it read on a specific date."
     (vtable-update-object (vtable-current-table) book book)
     (message "Marked %s as unread" (nth 1 book))))
 
-(defun bookiez-display-books (author)
-  (let ((inhibit-read-only t))
-    (erase-buffer)
-    (insert author "\n\n")
-    (let ((books nil)
-	  start)
-      (dolist (book bookiez-books)
-	(when (equal author (car book))
-	  (push book books)))
-      (setq books (sort books (lambda (b1 b2)
-				(string< (nth 3 b1) (nth 3 b2)))))
-      (dolist (book books)
-	(setq start (point))
-	(insert (nth 3 book) " " (nth 1 book) "\n")
-	(put-text-property start (1+ start) 'bookiez-thing
-			   (bookiez-thumbnail (nth 5 book) (nth 2 book)))
-	(put-text-property start (1+ start) 'bookiez-isbn (nth 2 book))))
-    (goto-char (point-min))
-    (forward-line 2)))
-
 (defun bookiez-author-delete-book ()
   "Delete the book under point."
   (interactive)
@@ -404,19 +360,6 @@ If given a prefix, don't mark it read on a specific date."
     (vtable-remove-object (vtable-current-table) book)
     (message "Removed %s: %s" (car book) (cadr book))))
 
-(defun bookiez-display-cover (thumbnail)
-  (save-excursion
-    (forward-line 1)
-    (if (looking-at "\\*")
-	;; Delete previously-inserted image.
-	(delete-region (point) (progn (forward-line 1) (point)))
-      (insert "\n")
-      (forward-line -1)
-      (url-retrieve thumbnail
-		    'bookiez-image-fetched
-		    (list (current-buffer) (point))
-		    t))))
-
 (defun bookiez-toggle-tracking ()
   "Toggle whether to track the author under point."
   (interactive)
@@ -429,6 +372,11 @@ If given a prefix, don't mark it read on a specific date."
       (push author (multisession-value bookiez-tracked-authors)))
     (vtable-update-object (vtable-current-table) object object)))
 
+(defvar-keymap bookiez-search-mode-map
+  "&" #'bookiez-search-goodreads
+  "b" #'bookiez-search-bookshop
+  "u" #'bookiez-search-biblio)
+
 (defun bookiez-search-tracked-authors (year)
   "Search for new books from all tracked authors that are newer than YEAR."
   (interactive "nSearch for book never than year: ")
@@ -437,7 +385,7 @@ If given a prefix, don't mark it read on a specific date."
 	data comments)
     (erase-buffer)
     (bookiez-search-mode)
-    (if (eq bookiez-assistant-function 'perplexity-query)
+    (if (eq bookiez-assistant 'perplexity)
 	(dolist (author (multisession-value bookiez-tracked-authors))
 	  (message "Querying %s..." author)
 	  (cl-destructuring-bind (adata acomments)
@@ -826,13 +774,10 @@ If given a prefix, don't mark it read on a specific date."
 			  (nth 0 book) (nth 1 book))))
 	(setf (gethash isbn table) book)))))
 
-(defvar bookiez-assistant-function 'perplexity-query
-  "Function to retrieve data from an assistant.")
-
 (defun bookiez-query-assistant-author (author &optional extra-text)
   (let ((result
-	 (funcall
-	  bookiez-assistant-function
+	 (query-assistant
+	  bookiez-assistant
 	  (concat
 	   (if (consp author)
 	       (concat "List, in chronological order, "
@@ -859,11 +804,6 @@ If given a prefix, don't mark it read on a specific date."
 	     else
 	     collect line into comments
 	     finally (cl-return (list data comments)))))
-
-(defvar-keymap bookiez-search-mode-map
-  "&" #'bookiez-search-goodreads
-  "b" #'bookiez-search-bookshop
-  "u" #'bookiez-search-biblio)
 
 (define-derived-mode bookiez-search-mode special-mode "Bookiez"
   "Mode to search for books."

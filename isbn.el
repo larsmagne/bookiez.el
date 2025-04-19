@@ -212,8 +212,7 @@ If ALL-RESULTS, return the results from all providors."
       (goto-char (point-min))
       (unwind-protect
 	  (and (search-forward "\n\n" nil t)
-	       (let ((json (json-parse-buffer)))
-		 (setq j2 json)))
+	       (json-parse-buffer))
 	(kill-buffer (current-buffer))))))
 
 ;;; Goodreads search.
