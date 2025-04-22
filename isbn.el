@@ -196,6 +196,21 @@ If ALL-RESULTS, return the results from all providors."
 		  (list title author date thumbnail))))))
   (kill-buffer (current-buffer)))
 
+(defun isbn-search-openlibrary (author)
+  (cl-loop for work across
+	   (gethash "docs"
+		    (isbn--fetch-data
+		     (format "https://openlibrary.org/search.json?author=%s&sort=new&fields=title,author_name,language,isbn,publish_date,key,number_of_pages_median,publish_year"
+			     (browse-url-encode-url author))))
+	   collect (list (seq-into (gethash "author_name" work) 'list)
+			 (gethash "title" work)
+			 (seq-into (gethash "isbn" work) 'list)
+			 (elt (gethash "publish_year" work) 0)
+			 (let ((pages (gethash "number_of_pages_median" work)))
+			   (if pages
+			       (format "%s pages" pages)
+			     "")))))
+
 ;;; ISBNdb API.
 
 (defun isbn-lookup-isbndb (isbn vector index)
