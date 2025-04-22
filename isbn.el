@@ -33,6 +33,9 @@
 (defvar isbn-google-key nil
   "If you do a lot of requests, put your key here to avoid rate limiting.")
 
+(defvar isbn-librarything-key nil
+  "The key for the LibraryThing API.")
+
 (defvar isbn-lookup-types
   `(goodreads
     google
@@ -105,6 +108,20 @@ If ALL-RESULTS, return the results from all providors."
   (or (= (length isbn) 13)
       (and (= (length isbn) 10)
 	   (equal isbn (isbn-compute (substring isbn 0 9))))))
+
+(defun isbn--fetch-data (url &optional type)
+  (with-current-buffer (url-retrieve-synchronously url t)
+    (goto-char (point-min))
+    (unwind-protect
+	(and (search-forward "\n\n" nil t)
+	     (cond
+	      ((eq type 'xml)
+	       (libxml-parse-xml-region (point) (point-max)))
+	      ((eq type 'html)
+	       (libxml-parse-html-region (point) (point-max)))
+	      (t
+	       (json-parse-buffer))))
+      (kill-buffer (current-buffer)))))
 
 ;;; Google Books API
 
@@ -298,6 +315,29 @@ If ALL-RESULTS, return the results from all providors."
 			      collect (cons (string-clean-whitespace
 					     (dom-texts link))
 					    (dom-attr link 'href))))))
+
+;; LibraryThing API.
+
+(defun isbn-search-librarything (string)
+  (let ((json (isbn--fetch-data
+	       (format
+		"https://www.librarything.com/api/talpa.php?search=%s&token=%s&limit=50"
+		(browse-url-encode-url string)
+		isbn-librarything-key))))
+    (cl-loop for work across (gethash "resultlist" (gethash "response" json))
+	     collect (list (gethash "title" work)
+			   (gethash "isbns" work)))))
+
+(defun isbn-isbns-librarything (isbn)
+  "Return other ISBNs that ISBN has been published under."
+  (cl-loop for elem in
+	   (dom-by-tag
+	    (isbn--fetch-data
+	     (format "https://www.librarything.com/api/%s/thingISBN/%s"
+		     isbn-librarything-key isbn)
+	     'xml)
+	    'isbn)
+	   collect (nth 2 elem)))
 
 (provide 'isbn)
 
