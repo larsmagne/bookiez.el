@@ -825,6 +825,46 @@ If given a prefix, don't mark it read on a specific date."
 			    (gethash "language" book)))
      nil)))
 
+(defun bookiez-list-author-books (author)
+  "List books form AUTHOR."
+  (interactive (list (nth 2 (vtable-current-object))))
+  (let ((data (sort (sort
+		     (isbn-search-openlibrary author)
+		     (lambda (b1 b2)
+		       (string< (format "%s" (elt b1 3))
+				(format "%s" (elt b2 3)))))
+		    ;; Sort for shortest list of authors first, to get
+		    ;; translated works last (since translators are
+		    ;; often listed as authors).
+		    (lambda (b1 b2)
+		      (< (length (elt b1 0)) (length (elt b2 0))))))
+	(works (make-hash-table :test #'equal)))
+    (dolist (book (seq-filter (lambda (b)
+				(or t
+				    (string-match-p "collected\\|completos"
+						    (nth 1 b))))
+			      data))
+      (let ((work nil))
+	(dolist (isbn (nth 2 book))
+	  (when (gethash isbn works)
+	    (setq work (gethash isbn works))))
+	(unless work
+	  (when-let ((isbn (car (nth 2 book))))
+	    (message "Looking up %s" isbn)
+	    (dolist (isbn (isbn-isbns-librarything isbn))
+	      (unless (gethash isbn works)
+		(setf (gethash isbn works) book)))))))
+    (let ((books nil))
+      (maphash (lambda (_k v)
+		 (cl-pushnew v books))
+	       works)
+      (bookiez--search-author-render
+       (cl-loop for (authors title _isbns date id) in books
+		collect (list (string-join authors ", ")
+			      title
+			      date
+			      id))))))
+
 (defun bookiez-search-author (author &optional extra-text)
   (cl-destructuring-bind (data comments)
       (bookiez-query-assistant-author author extra-text)
@@ -842,7 +882,7 @@ If given a prefix, don't mark it read on a specific date."
 	      collect (list title year comment))
      comments)))
 
-(defun bookiez--search-author-render (data comments)
+(defun bookiez--search-author-render (data &optional comments)
   (switch-to-buffer "*Bookiez Search*")
   (let ((inhibit-read-only t))
     (erase-buffer)
