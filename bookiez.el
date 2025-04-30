@@ -57,7 +57,17 @@
   "a" #'bookiez-add-book-manually
   "&" #'bookiez-book-goodreads
   "l" #'bookiez
-  "c" #'bookiez-book-edit)
+  "c" #'bookiez-book-edit
+  "0" #'bookiez-isbn-number
+  "1" #'bookiez-isbn-number
+  "2" #'bookiez-isbn-number
+  "3" #'bookiez-isbn-number
+  "4" #'bookiez-isbn-number
+  "5" #'bookiez-isbn-number
+  "6" #'bookiez-isbn-number
+  "7" #'bookiez-isbn-number
+  "8" #'bookiez-isbn-number
+  "9" #'bookiez-isbn-number)
 
 (defvar bookiez-book-isbn nil)
 
@@ -82,7 +92,12 @@
 	(erase-buffer)
 	(bookiez-book-mode)
 	(setq-local bookiez-book-isbn isbn)
-	(insert author "\n" title "\n" date "\nISBN" isbn "\n\n")
+	(insert author "\n" title "\n" date "\nISBN" isbn "\n\n")	
+	(when save
+	  (bookiez-add-book author title isbn date thumbnail
+			    (eq save 'ebook)
+			    nil)
+	  (bookiez-cache-image isbn thumbnail))
 	(let ((file (expand-file-name (format "%s.jpg" isbn)
 				      "~/.emacs.d/bookiez-cache/")))
 	  (when (file-exists-p file)
@@ -91,12 +106,7 @@
 	    (insert "\n")))
 	(goto-char (point-min))
 	(setq bookiez-last-isbn nil)
-	(bookiez-play "61-KREVmorse .mp3")
-	(when save
-	  (bookiez-add-book author title isbn date thumbnail
-			    (eq save 'ebook)
-			    nil)
-	  (bookiez-cache-image isbn thumbnail))))))
+	(bookiez-play "61-KREVmorse .mp3")))))
 
 (defun bookiez-book-edit ()
   "Edit the book data in the current buffer."
@@ -464,7 +474,26 @@ If given a prefix, don't mark it read on a specific date."
   "s" #'bookiez-author-search
   "n" #'bookiez-author-search-new-books
   "m" #'bookiez-author-search-missing-books
-  "q" #'bury-buffer)
+  "q" #'bury-buffer
+  "0" #'bookiez-isbn-number
+  "1" #'bookiez-isbn-number
+  "2" #'bookiez-isbn-number
+  "3" #'bookiez-isbn-number
+  "4" #'bookiez-isbn-number
+  "5" #'bookiez-isbn-number
+  "6" #'bookiez-isbn-number
+  "7" #'bookiez-isbn-number
+  "8" #'bookiez-isbn-number
+  "9" #'bookiez-isbn-number)
+
+(defun bookiez-isbn-number ()
+  "Add ISBN from the numbers entered."
+  (interactive)
+  (let ((chars (list (elt (this-command-keys) 0))))
+    (cl-loop for char = (read-char)
+	     while (not (equal char ?\r))
+	     do (setq chars (nconc chars (list char))))
+    (bookiez-add-isbn (seq-into chars 'string))))
 
 (define-derived-mode bookiez-author-mode special-mode "Bookiez"
   "Mode to display books."
@@ -548,6 +577,7 @@ If given a prefix, don't mark it read on a specific date."
      :row-colors '("#202020" "#000000")
      :columns '((:name "Format")
 		(:name "Status")
+		(:name "Read" :min-width 12)
 		(:name "Author" :max-width 30)
 		(:name "Title"))
      :objects-function (lambda () bookiez-books)
