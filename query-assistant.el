@@ -12,11 +12,12 @@
 
 ;; Usage: Get an API key from query-assistant.ai and:
 
-;; (setq query-assistant-key "API_KEY")
+;; (setq query-assistant-gemini-key "API_KEY")
+;; and so on.
 ;;
 ;; Then query away:
 ;;
-;; (query-assistant-query "What is one plus two? ")
+;; (query-assistant 'gemini "What is one plus two? ")
 ;; => "One plus two equals three."
 
 ;;; Code:
