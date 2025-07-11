@@ -475,6 +475,7 @@ If given a prefix, don't mark it read on a specific date."
   "n" #'bookiez-author-search-new-books
   "m" #'bookiez-author-search-missing-books
   "q" #'bury-buffer
+  "e" #'bookiez-add-ebook-manually
   "0" #'bookiez-isbn-number
   "1" #'bookiez-isbn-number
   "2" #'bookiez-isbn-number
@@ -529,7 +530,12 @@ If given a prefix, don't mark it read on a specific date."
 (defun bookiez-author-display-author ()
   "Display the author of the book under point."
   (interactive)
-  (bookiez-show-author (nth 0 (vtable-current-object))))
+  (let ((author (nth 0 (vtable-current-object))))
+    (when (string-search ", " author)
+      (setq author (completing-read "Multiple authors: "
+				    (split-string author ", ")
+				    nil t)))
+    (bookiez-show-author author)))
 
 (defun bookiez-author-search ()
   "Search for books by the author under point."
