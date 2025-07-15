@@ -24,6 +24,7 @@
 (require 'server)
 (require 'iso8601)
 (require 'query-assistant)
+(require 'multisession)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
 (defvar bookiez-last-isbn nil)
