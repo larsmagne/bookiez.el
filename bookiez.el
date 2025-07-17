@@ -27,6 +27,7 @@
 (require 'multisession)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data")
+(defvar bookiez-cache "~/.emacs.d/bookiez-cache")
 (defvar bookiez-last-isbn nil)
 (defvar bookiez-books nil)
 
@@ -266,7 +267,7 @@
   "&" #'bookiez-goodreads
   "c" #'bookiez-edit-author
   "i" #'bookiez-add-isbn
-  "SPC" #'bookiez-toggle-tracking
+  "t" #'bookiez-toggle-tracking
   "n" #'bookiez-search-tracked-authors
   "e" #'bookiez-add-ebook-manually)
 
@@ -511,7 +512,7 @@ If given a prefix, don't mark it read on a specific date."
     (make-vtable
      :row-colors '("#404040" "#202020")
      :divider-width 2
-     ;:column-colors '("#404040" "#202020")
+                                        ;:column-colors '("#404040" "#202020")
      :columns '((:name "Cover")
 		(:name "Format")
 		(:name "Status")
@@ -605,9 +606,9 @@ If given a prefix, don't mark it read on a specific date."
 	   (decoded-time-set-defaults
 	    (iso8601-parse-date value)))))))
      ("Published"
-       (if (equal value "1970-01-01")
-	   ""
-	 (substring value 0 4)))
+      (if (equal value "1970-01-01")
+	  ""
+	(substring value 0 4)))
      ("Bought"
       ;; Registration started in 2013, so the data before that
       ;; isn't accurate.  And the second date is when ebook data
@@ -626,8 +627,8 @@ If given a prefix, don't mark it read on a specific date."
 
 (defun bookiez--get-book-data (object column table)
   (cl-destructuring-bind ( author title isbn published-date
-			   bought-date _thumbnail format
-			   . read)
+			          bought-date _thumbnail format
+			          . read)
       object
     (pcase (vtable-column table column)
       ("Format"
@@ -659,7 +660,7 @@ If given a prefix, don't mark it read on a specific date."
        title)
       ("Cover"
        (let ((file (expand-file-name (format "%s.jpg" isbn)
-				     "~/.emacs.d/bookiez-cache/")))
+				     bookiez-cache)))
 	 (propertize "*" 'display 
 		     (if (file-exists-p file)
 			 (create-image file nil nil :height 100 :max-width 100)
@@ -740,10 +741,10 @@ If given a prefix, don't mark it read on a specific date."
 	   do (bookiez-cache-image (nth 2 book) (nth 5 book))))
 
 (defun bookiez-cache-image (isbn url)
-  (unless (file-exists-p "~/.emacs.d/bookiez-cache/")
-    (make-directory "~/.emacs.d/bookiez-cache/"))
+  (unless (file-exists-p bookiez-cache)
+    (make-directory bookiez-cache))
   (let ((file (expand-file-name (concat isbn ".jpg")
-				"~/.emacs.d/bookiez-cache/")))
+				bookiez-cache)))
     (when (and (not (file-exists-p file))
 	       url
 	       (string-match "\\`http" url))
@@ -955,7 +956,7 @@ If given a prefix, don't mark it read on a specific date."
    (format "https://www.goodreads.com/search?q=%s %s"
 	   (nth 0 (vtable-current-object))
 	   (nth 2 (vtable-current-object)))))
-  
+
 (defun bookiez-search-bookshop ()
   "Search Bookshop for the book under point."
   (interactive)
