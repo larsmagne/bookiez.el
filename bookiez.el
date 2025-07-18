@@ -26,7 +26,12 @@
 (require 'query-assistant)
 (require 'multisession)
 
-(defvar bookiez-file "~/.emacs.d/bookiez.data")
+(defvar bookiez-file "~/.emacs.d/bookiez.data"
+  "The file where the data will be stored.")
+
+(defvar bookiez-cache "~/.emacs.d/bookiez-cache/"
+  "Directory where bookiez will cache cover images.")
+
 (defvar bookiez-last-isbn nil)
 (defvar bookiez-books nil)
 
@@ -99,8 +104,7 @@
 			    (eq save 'ebook)
 			    nil)
 	  (bookiez-cache-image isbn thumbnail))
-	(let ((file (expand-file-name (format "%s.jpg" isbn)
-				      "~/.emacs.d/bookiez-cache/")))
+	(let ((file (expand-file-name (format "%s.jpg" isbn) bookiez-cache)))
 	  (when (file-exists-p file)
 	    (insert-image (create-image file nil nil :max-width 800
 					:max-height 800))
@@ -658,8 +662,7 @@ If given a prefix, don't mark it read on a specific date."
       ("Title"
        title)
       ("Cover"
-       (let ((file (expand-file-name (format "%s.jpg" isbn)
-				     "~/.emacs.d/bookiez-cache/")))
+       (let ((file (expand-file-name (format "%s.jpg" isbn) bookiez-cache)))
 	 (propertize "*" 'display 
 		     (if (file-exists-p file)
 			 (create-image file nil nil :height 100 :max-width 100)
@@ -740,10 +743,9 @@ If given a prefix, don't mark it read on a specific date."
 	   do (bookiez-cache-image (nth 2 book) (nth 5 book))))
 
 (defun bookiez-cache-image (isbn url)
-  (unless (file-exists-p "~/.emacs.d/bookiez-cache/")
-    (make-directory "~/.emacs.d/bookiez-cache/"))
-  (let ((file (expand-file-name (concat isbn ".jpg")
-				"~/.emacs.d/bookiez-cache/")))
+  (unless (file-exists-p bookiez-cache)
+    (make-directory bookiez-cache))
+  (let ((file (expand-file-name (concat isbn ".jpg") bookiez-cache)))
     (when (and (not (file-exists-p file))
 	       url
 	       (string-match "\\`http" url))
