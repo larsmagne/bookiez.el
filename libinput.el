@@ -33,9 +33,9 @@
 
 (defun libinput-start (callback)
   "Start listening for events."
-  (libinput--start callback #'libinput--parse-line "debug-events"))
+  (libinput--start callback #'libinput--parse-line "libinput" "debug-events"))
 
-(defun libinput--start (callback parser &rest command)
+(defun libinput--start (callback parser program &rest command)
   (libinput-stop)
   (with-current-buffer (get-buffer-create " *libinput*")
     (setq-local libinput--prev-point (point-max))
@@ -44,7 +44,7 @@
     (setq-local libinput--parser parser)
     (setq libinput--process
 	  (apply #'start-process "libinput" (current-buffer)
-		 "libinput" command))
+		 program command))
     (set-process-filter libinput--process #'libinput--filter)
     (set-process-query-on-exit-flag libinput--process nil)))
 
@@ -128,8 +128,8 @@
 
 (defun libinput-record (callback device-name)
   (when-let ((device (libinput--find-device device-name)))
-    (libinput--start callback #'libinput--record-parser "record"
-		     "--show-keycodes" device)))
+    (libinput--start callback #'libinput--record-parser
+		     "libinput" "record" "--show-keycodes" device)))
 
 (defun libinput--find-device (device-name)
   (with-temp-buffer
@@ -144,6 +144,15 @@
 (defun libinput--record-parser (line)
   (and (string-match "EV_KEY / \\([^ ]+\\)[\t ]+0[\t ]*$" line)
        (list :key (match-string 1 line))))
+
+(defun libinput--grab-parser (line)
+  (and (string-match "EV_KEY.*\\(KEY_[^ )]+\\).*value 0[\t ]*$" line)
+       (list :key (match-string 1 line))))
+
+(defun libinput-grab (callback device-name)
+  (when-let ((device (libinput--find-device device-name)))
+    (libinput--start callback #'libinput--grab-parser
+		     "evtest" "--grab" device)))
 
 (provide 'libinput)
 
