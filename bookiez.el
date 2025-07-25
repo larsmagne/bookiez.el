@@ -354,6 +354,33 @@
   (interactive)
   (bookiez-mark-as-read nil "skipped"))
 
+(defun bookiez-mark-as-wishlist ()
+  "Mark the book under point as a wishlist item.
+I.e., this is a book that you haven't actually got yet, but plan
+on getting."
+  (interactive)
+  (bookiez-mark-as-read nil "wishlist"))
+
+(defun bookiez-mark-as-bought ()
+  "Mark the wishlist book under point as bought."
+  (interactive)
+  (let ((book (vtable-current-object)))
+    (unless book
+      (error "No book on the current line"))
+    (let ((data (nthcdr 7 book)))
+      (unless (cl-loop for elem in data
+		       when (string-match-p "\\`wishlist:" elem)
+		       return t)
+	(error "Not a wishlist item under point"))
+      (setcdr (nthcdr 6 book)
+	      (cl-loop for elem in data
+		       if (string-match-p "\\`wishlist:" elem)
+		       collect "unread"
+		       else
+		       collect elem)))
+    (bookiez-write-database)
+    (vtable-update-object (vtable-current-table) book book)))
+
 (defun bookiez-mark-as-read (&optional unknown-date read-prefix)
   "Mark the book under point as read.
 If given a prefix, don't mark it read on a specific date."
@@ -373,7 +400,7 @@ If given a prefix, don't mark it read on a specific date."
 				(format-time-string "%Y-%m-%d")))))
     (bookiez-write-database)
     (vtable-update-object (vtable-current-table) book book)
-    (message "Marked %s as read" (nth 1 book))))
+    (message "Marked %s as %s" (nth 1 book) (or read-prefix "read"))))
 
 (defun bookiez-mark-as-unread ()
   "Mark the book under point as unread."
@@ -503,6 +530,8 @@ for instance, being notified when they publish a new book."
   "r" #'bookiez-mark-as-read
   "u" #'bookiez-mark-as-unread
   "k" #'bookiez-mark-as-skipped
+  "w" #'bookiez-mark-as-wishlist
+  "b" #'bookiez-mark-as-bought
   "DEL" #'bookiez-author-delete-book
   "s" #'bookiez-author-search
   "n" #'bookiez-author-search-new-books
@@ -665,6 +694,10 @@ for instance, being notified when they publish a new book."
 		       when (string-match-p "\\`skipped:" elem)
 		       return t)
 	      "❌")
+	     ((cl-loop for elem in read
+		       when (string-match-p "\\`wishlist:" elem)
+		       return t)
+	      "🎇")
 	     (t
 	      "✔️")))
       ("Published"
@@ -674,7 +707,8 @@ for instance, being notified when they publish a new book."
       ("Read"
        (or
 	(cl-loop for elem in read
-		 when (string-match "\\`\\(read\\|skipped\\):\\(.*\\)" elem)
+		 when (string-match
+		       "\\`\\(read\\|skipped\\):\\(.*\\)" elem)
 		 return (match-string 2 elem))
 	""))
       ("Author"
