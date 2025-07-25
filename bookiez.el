@@ -83,6 +83,8 @@
   "&" #'bookiez-book-goodreads
   "l" #'bookiez
   "q" #'bury-buffer
+  "j" #'bookiez-change-jacket
+  "J" #'bookiez-query-jacket
   "c" #'bookiez-book-edit)
 
 (defvar bookiez-book-isbn nil)
@@ -114,7 +116,7 @@
 			    (eq save 'ebook)
 			    nil)
 	  (bookiez-cache-image isbn thumbnail))
-	(let ((file (expand-file-name (format "%s.jpg" isbn) bookiez-cache)))
+	(let ((file (bookiez--cache-file isbn)))
 	  (when (file-exists-p file)
 	    (insert-image (create-image file nil nil :max-width 800
 					:max-height 800))
@@ -122,6 +124,20 @@
 	(goto-char (point-min))
 	(setq bookiez-last-isbn nil)
 	(bookiez-play "61-KREVmorse .mp3")))))
+
+(defun bookiez-change-jacket (file)
+  "Change the cover jacket image used for the book."
+  (interactive "fFile name of new book jacket: " bookiez-book-mode)
+  (copy-file file (bookiez--cache-file bookiez-book-isbn) t)
+  (clear-image-cache))
+
+(defun bookiez-query-jacket ()
+  "Re-download the book jacket."
+  (interactive nil bookiez-book-mode)
+  (bookiez-cache-image bookiez-book-isbn
+		       (nth 3 (bookiez-lookup bookiez-book-isbn))
+		       t)
+  (clear-image-cache))
 
 (defun bookiez-book-edit ()
   "Edit the book data in the current buffer."
@@ -666,7 +682,7 @@ for instance, being notified when they publish a new book."
       ("Title"
        title)
       ("Cover"
-       (let ((file (expand-file-name (format "%s.jpg" isbn) bookiez-cache)))
+       (let ((file (bookiez--cache-file isbn)))
 	 (propertize "*" 'display 
 		     (if (file-exists-p file)
 			 (create-image file nil nil :height 100 :max-width 100)
@@ -746,11 +762,14 @@ for instance, being notified when they publish a new book."
   (cl-loop for book in bookiez-books
 	   do (bookiez-cache-image (nth 2 book) (nth 5 book))))
 
-(defun bookiez-cache-image (isbn url)
+(defun bookiez--cache-file (isbn)
+  (expand-file-name (concat isbn ".jpg") bookiez-cache))
+
+(defun bookiez-cache-image (isbn url &optional force)
   (unless (file-exists-p bookiez-cache)
     (make-directory bookiez-cache))
-  (let ((file (expand-file-name (concat isbn ".jpg") bookiez-cache)))
-    (when (and (not (file-exists-p file))
+  (let ((file (bookiez--cache-file isbn)))
+    (when (and (or force (not (file-exists-p file)))
 	       url
 	       (string-match "\\`http" url))
       (when-let ((buf (ignore-errors (url-retrieve-synchronously url))))
