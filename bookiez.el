@@ -259,16 +259,17 @@
 
 (defun bookiez-read-database ()
   (setq bookiez-books nil)
-  (with-temp-buffer
-    (insert-file-contents bookiez-file)
-    (while (not (eobp))
-      (let ((book (split-string (buffer-substring (point) (line-end-position))
-				"\t")))
-	(while (< (length book) 7)
-	  (nconc book (list "")))
-	(push book bookiez-books))
-      (forward-line 1))
-    (setq bookiez-books (nreverse bookiez-books))))
+  (when (file-exists-p bookiez-file)
+    (with-temp-buffer
+      (insert-file-contents bookiez-file)
+      (while (not (eobp))
+	(let ((book (split-string (buffer-substring (point) (line-end-position))
+				  "\t")))
+	  (while (< (length book) 7)
+	    (nconc book (list "")))
+	  (push book bookiez-books))
+	(forward-line 1))
+      (setq bookiez-books (nreverse bookiez-books)))))
 
 (defun bookiez-write-database ()
   (let ((coding-system-for-write 'utf-8))
@@ -287,12 +288,15 @@
   (interactive)
   (when start-server
     (bookiez-start-server))
-  (when bookiez-barcode-device
+  (when (and bookiez-barcode-device
+	     (not libinput--process))
     (bookiez--start-libinput))
   (bookiez--possibly-read-database)
   (switch-to-buffer "*Bookiez*")
   (bookiez-mode)
-  (bookiez-display-authors))
+  (if (not bookiez-books)
+      (message "Empty database; add some books")
+    (bookiez-display-authors)))
 
 (defvar-keymap bookiez-mode-map
   :parent vtable-map
