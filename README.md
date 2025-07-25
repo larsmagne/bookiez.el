@@ -48,3 +48,26 @@ It's most convenient if it works like a USB HID keyboard and just
 outputs the ISBN followed by a `RET', which will make it work
 automatically with bookiez.
 
+Tracked Authors
+===============
+
+If you have authors you follow particularly, these are called "tracked
+authors" (because you're keeping track of them).  To mark an author
+this way, use the `SPC' command in the author buffer.  The `n' command
+will then report on new books from all these authors.  As explained in 
+this blog post:
+https://lars.ingebrigtsen.no/2025/04/17/perplexingly-book-learned-emacs/ 
+There really are no good ways to get this data at the present.  So
+bookiez will use an LLM to try to figure out this stuff.  The most
+useful backend for this is Perplexity.ai.  You need to get an API key
+for that, and set `query-assistant-perplexity-key' for this command to
+work.
+
+Commands
+========
+
+There's a whole bunch of commands in the various bookiez buffers --
+for searching Goodreads, Bookshop and Biblio, for instance.  Use the
+normal Emacs commands (`C-h b' etc) to get a list of available
+commands in each buffer.
+
