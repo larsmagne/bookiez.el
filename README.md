@@ -105,7 +105,7 @@ So then you
 
     (setq bookiez-barcode-device "© Datalogic 2002 Datalogic Bar Code Scanner")
 	
-After restarting bookiz, bookiez will then automatically listen for
+After restarting bookiez, bookiez will then automatically listen for
 events from the barcode scanner and mark new scanned ISBNs as newly
 bought books.  If you scan a code twice, it'll mark the book as read.
 
