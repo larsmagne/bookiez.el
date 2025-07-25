@@ -92,6 +92,10 @@
   ;; means...
   ;; -event3   KEYBOARD_KEY     +501.91s	*** (-1) pressed
   ;;  event3   KEYBOARD_KEY     +502.02s	*** (-1) pressed
+  ;; -event4   KEYBOARD_KEY     +3.719s	        KEY_MUTE (113) pressed
+  ;;  event4   KEYBOARD_KEY     +3.825s	        KEY_MUTE (113) released
+  ;;  event2   TOUCH_DOWN       +5.526s	        0 (0) 55.04/ 8.28 (595.00/159.00mm)
+
   (let* ((elem (split-string (substring line 1) "[ \n\t]+" t))
 	 (type (cadr elem)))
     (append
@@ -111,6 +115,9 @@
       ((equal type "SWITCH_TOGGLE")
        (list :switch (nth 4 elem)
 	     :state (nth 6 elem)))
+      ((equal type "KEYBOARD_KEY")
+       (list :key (nth 3 elem)
+	     :pressed (equal (car (last elem)) "pressed")))
       ((equal type "DEVICE_ADDED")
        (list :name (mapconcat
 		    #'identity
@@ -120,9 +127,9 @@
 		    " ")))))))
 
 (defun libinput-record (callback device-name)
-  (libinput--start callback #'libinput--record-parser "record"
-		   "--show-keycodes"
-		   (libinput--find-device device-name)))
+  (when-let ((device (libinput--find-device device-name)))
+    (libinput--start callback #'libinput--record-parser "record"
+		     "--show-keycodes" device)))
 
 (defun libinput--find-device (device-name)
   (with-temp-buffer
