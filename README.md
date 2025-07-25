@@ -86,7 +86,7 @@ scanner no matter which window has focus -- that way you can just grab
 the scanner after buying some new books without futzing around at all.
 But this requires some setup.
 
-	apt install libinput-tools
+	apt install evtest
 	adduser `whoami` input
 	
 Then log out and in again to ensure that you're allowed to read the
@@ -108,15 +108,3 @@ So then you
 After restarting bookiez, bookiez will then automatically listen for
 events from the barcode scanner and mark new scanned ISBNs as newly
 bought books.  If you scan a code twice, it'll mark the book as read.
-
-If you do this, you should make your OS ignore the barcode scanner --
-otherwise you'll get a lot of ISBNs in random windows.  Under X, you
-do it like this.
-
-	# Disable the Gryphon barcode scanner "keyboard"
-	for id in `xlist Datalogic`; do
-		xinput float $id
-	done
-
-Under Wayland -- does anybody really know?  Probably not.
-

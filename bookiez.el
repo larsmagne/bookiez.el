@@ -1043,8 +1043,8 @@ for instance, being notified when they publish a new book."
 	   (nth 2 (vtable-current-object)))))
 
 (defun bookiez--start-libinput ()
-  (libinput-record #'bookiez--handle-libinput
-		   bookiez-barcode-device))
+  (libinput-grab #'bookiez--handle-libinput
+		 bookiez-barcode-device))
 
 (defvar bookiez--libinput-queue nil)
 
