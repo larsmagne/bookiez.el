@@ -63,6 +63,13 @@ useful backend for this is Perplexity.ai.  You need to get an API key
 for that, and set `query-assistant-perplexity-key' for this command to
 work.
 
+You do not need to use the LLM stuff to use bookiez -- it's only used
+for a couple of commands like this.  And as usual with LLMs, the
+output is not to be trusted, and will usually give different results
+ever time you use the commands.  That is, the LLMs will invent books
+that don't exist, and they will also skip books that do exist.  But
+it's moderately useful anyway.
+
 Commands
 ========
 
