@@ -1,5 +1,5 @@
 ;;; bookiez.el --- Managing Books  -*- lexical-binding: t; -*-
-;; Copyright (C) 2013 Lars Magne Ingebrigtsen
+;; Copyright (C) 2013-2025 Lars Magne Ingebrigtsen
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: books
@@ -11,8 +11,10 @@
 
 ;;; Commentary:
 
-;; bookiez is a library for looking up ISBNs via the Google Book API,
-;; displaying the result, and maintaining a database of books.
+;; bookiez is a library for maintaining a database of books.  It uses
+;; various external services for querying ISBNs for data on the books,
+;; and also allows using various LLMs to get information about new
+;; books from authors you're interested in keeping track of.
 
 ;;; Code:
 
@@ -80,6 +82,7 @@
 (defvar-keymap bookiez-book-mode-map
   "&" #'bookiez-book-goodreads
   "l" #'bookiez
+  "q" #'bury-buffer
   "c" #'bookiez-book-edit)
 
 (defvar bookiez-book-isbn nil)
@@ -273,6 +276,7 @@
   :parent vtable-map
   "RET" #'bookiez-show-author
   "l" #'bookiez-list
+  "q" #'bury-buffer
   "a" #'bookiez-add-book-manually
   "&" #'bookiez-goodreads
   "c" #'bookiez-edit-author
@@ -382,7 +386,9 @@ If given a prefix, don't mark it read on a specific date."
     (message "Removed %s: %s" (car book) (cadr book))))
 
 (defun bookiez-toggle-tracking ()
-  "Toggle whether to track the author under point."
+  "Toggle whether to track the author under point.
+(A \"tracked author\" is an author you want to keep track of --
+for instance, being notified when they publish a new book."
   (interactive)
   (let* ((object (vtable-current-object))
 	 (author (nth 2 object)))
@@ -394,6 +400,7 @@ If given a prefix, don't mark it read on a specific date."
     (vtable-update-object (vtable-current-table) object object)))
 
 (defvar-keymap bookiez-search-mode-map
+  "q" #'bury-buffer
   "&" #'bookiez-search-goodreads
   "b" #'bookiez-search-bookshop
   "u" #'bookiez-search-biblio)
