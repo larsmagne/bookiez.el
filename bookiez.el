@@ -56,14 +56,9 @@
     (message "Invalid ISBN %s" isbn)
     (bookiez-play "74-kaffe matthews - still striped .mp3")))
 
-(define-derived-mode bookiez-book-mode special-mode "Bookiez"
-  "Mode to display a book.")
-
-(defvar-keymap bookiez-book-mode-map
+(defvar-keymap bookiez-isbn-minor-mode-map
   "a" #'bookiez-add-book-manually
-  "&" #'bookiez-book-goodreads
-  "l" #'bookiez
-  "c" #'bookiez-book-edit
+  "i" #'bookiez-add-isbn
   "0" #'bookiez-isbn-number
   "1" #'bookiez-isbn-number
   "2" #'bookiez-isbn-number
@@ -74,6 +69,18 @@
   "7" #'bookiez-isbn-number
   "8" #'bookiez-isbn-number
   "9" #'bookiez-isbn-number)
+
+(define-minor-mode bookiez-isbn-minor-mode
+  "Minor mode to enter books by ISBN.")
+
+(define-derived-mode bookiez-book-mode special-mode "Bookiez"
+  "Mode to display a book."
+  (bookiez-isbn-minor-mode 1))
+
+(defvar-keymap bookiez-book-mode-map
+  "&" #'bookiez-book-goodreads
+  "l" #'bookiez
+  "c" #'bookiez-book-edit)
 
 (defvar bookiez-book-isbn nil)
 
@@ -269,7 +276,6 @@
   "a" #'bookiez-add-book-manually
   "&" #'bookiez-goodreads
   "c" #'bookiez-edit-author
-  "i" #'bookiez-add-isbn
   "SPC" #'bookiez-toggle-tracking
   "n" #'bookiez-search-tracked-authors
   "e" #'bookiez-add-ebook-manually)
@@ -460,15 +466,14 @@ If given a prefix, don't mark it read on a specific date."
 
 (define-derived-mode bookiez-mode special-mode "Bookiez"
   "Mode for bookiez mode buffers."
-  (setq truncate-lines t))
+  (setq truncate-lines t)
+  (bookiez-isbn-minor-mode 1))
 
 (defvar-keymap bookiez-author-mode-map
   :parent vtable-map
   "RET" #'bookiez-author-display-book
   "l" #'bookiez
   "A" #'bookiez-author-display-author
-  "i" #'bookiez-add-isbn
-  "a" #'bookiez-add-book-manually
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
   "C" #'bookiez-author-edit-all-data
@@ -480,30 +485,22 @@ If given a prefix, don't mark it read on a specific date."
   "n" #'bookiez-author-search-new-books
   "m" #'bookiez-author-search-missing-books
   "q" #'bury-buffer
-  "e" #'bookiez-add-ebook-manually
-  "0" #'bookiez-isbn-number
-  "1" #'bookiez-isbn-number
-  "2" #'bookiez-isbn-number
-  "3" #'bookiez-isbn-number
-  "4" #'bookiez-isbn-number
-  "5" #'bookiez-isbn-number
-  "6" #'bookiez-isbn-number
-  "7" #'bookiez-isbn-number
-  "8" #'bookiez-isbn-number
-  "9" #'bookiez-isbn-number)
+  "e" #'bookiez-add-ebook-manually)
 
 (defun bookiez-isbn-number ()
   "Add ISBN from the numbers entered."
   (interactive)
   (let ((chars (list (elt (this-command-keys) 0))))
-    (cl-loop for char = (read-char)
+    (cl-loop for char = (read-char (format "ISBN: %s-"
+					   (seq-into chars 'string)))
 	     while (not (equal char ?\r))
 	     do (setq chars (nconc chars (list char))))
     (bookiez-add-isbn (seq-into chars 'string))))
 
 (define-derived-mode bookiez-author-mode special-mode "Bookiez"
   "Mode to display books."
-  (setq truncate-lines t))
+  (setq truncate-lines t)
+  (bookiez-isbn-minor-mode 1))
 
 (defun bookiez-show-author (author)
   "Show the data for AUTHOR."
@@ -846,7 +843,8 @@ If given a prefix, don't mark it read on a specific date."
 
 (define-derived-mode bookiez-search-mode special-mode "Bookiez"
   "Mode to search for books."
-  (setq truncate-lines t))
+  (setq truncate-lines t)
+  (bookiez-isbn-minor-mode 1))
 
 (defvar bookiez-author)
 
