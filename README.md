@@ -29,7 +29,7 @@ autoload the top-level command:
 	
 Then just type `M-x bookiez' to start bookiez.
 
-To enter a new book, either use the `i' command, or just start typing
+To enter a new book, either use the 'i' command, or just start typing
 the ISBN followed by a `RET'.  bookiez will then query the ISBN using
 Goodreads, the Google Book API, the OpenLibrary API, and optionally
 the ISBNDB API.
