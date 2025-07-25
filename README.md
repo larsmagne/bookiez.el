@@ -38,16 +38,6 @@ If you wish to use ISBNDB, you need to get an API key from ISBNDB, and
 set `isbn-isbndb-key' to that key.  See
 https://isbndb.com/isbndb-api-documentation-v2.
 
-If you have a lot of books to enter, it's strongly recommended to get
-an ISBN barcode scanner.  I've been using a Datalogic QuickScan Mobile
-QM2131 for over a decade:
-
-![](https://lars.ingebrigtsen.no/?p=114768)
-
-It's most convenient if it works like a USB HID keyboard and just
-outputs the ISBN followed by a `RET', which will make it work
-automatically with bookiez.
-
 Tracked Authors
 ===============
 
@@ -77,4 +67,56 @@ There's a whole bunch of commands in the various bookiez buffers --
 for searching Goodreads, Bookshop and Biblio, for instance.  Use the
 normal Emacs commands (`C-h b' etc) to get a list of available
 commands in each buffer.
+
+Barcode Scanners
+================
+
+If you have a lot of books to enter, it's strongly recommended to get
+an ISBN barcode scanner.  I've been using a Datalogic QuickScan Mobile
+QM2131 for over a decade:
+
+![](https://lars.ingebrigtsen.no/?p=114768)
+
+It's most convenient if it works like a USB HID keyboard and just
+outputs the ISBN followed by a `RET', which will make it work
+automatically with bookiez.
+
+It can also be convenient to have your Emacs respond to a barcode
+scanner no matter which window has focus -- that way you can just grab
+the scanner after buying some new books without futzing around at all.
+But this requires some setup.
+
+	apt install libinput-tools
+	adduser `whoami` input
+	
+Then log out and in again to ensure that you're allowed to read the
+libinput device.  (Note that some may consider this to be a security
+issue -- basically all programs that are running as yourself may then
+read all input events.)
+
+	libinput list-devices
+	
+and look at the output to find your barcode scanner.  Mine looks like:
+
+	Device:                  © Datalogic 2002 Datalogic Bar Code Scanner
+	Kernel:                  /dev/input/event21
+
+So then you 
+
+    (setq bookiez-barcode-device "© Datalogic 2002 Datalogic Bar Code Scanner")
+	
+After restarting bookiz, bookiez will then automatically listen for
+events from the barcode scanner and mark new scanned ISBNs as newly
+bought books.  If you scan a code twice, it'll mark the book as read.
+
+If you do this, you should make your OS ignore the barcode scanner --
+otherwise you'll get a lot of ISBNs in random windows.  Under X, you
+do it like this.
+
+	# Disable the Gryphon barcode scanner "keyboard"
+	for id in `xlist Datalogic`; do
+		xinput float $id
+	done
+
+Under Wayland -- does anybody really know?  Probably not.
 

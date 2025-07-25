@@ -27,6 +27,7 @@
 (require 'iso8601)
 (require 'query-assistant)
 (require 'multisession)
+(require 'libinput)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data"
   "The file where the data will be stored.")
@@ -39,6 +40,9 @@
 
 (defvar bookiez-assistant 'perplexity
   "What assistant to use.")
+
+(defvar bookiez-barcode-device nil
+  "The libinput name of the barcode scanner.")
 
 (defun bookiez-display-isbn (isbn &optional save)
   (when save
@@ -283,6 +287,8 @@
   (interactive)
   (when start-server
     (bookiez-start-server))
+  (when bookiez-barcode-device
+    (bookiez--start-libinput))
   (bookiez--possibly-read-database)
   (switch-to-buffer "*Bookiez*")
   (bookiez-mode)
@@ -1031,5 +1037,21 @@ for instance, being notified when they publish a new book."
    (format "https://www.biblio.com/search.php?stage=1&title=%s %s"
 	   (nth 0 (vtable-current-object))
 	   (nth 2 (vtable-current-object)))))
+
+(defun bookiez--start-libinput ()
+  (libinput-record #'bookiez--handle-libinput
+		   bookiez-barcode-device))
+
+(defvar bookiez--libinput-queue nil)
+
+(defun bookiez--handle-libinput (event)
+  (when-let ((key (plist-get event :key)))
+    (when (string-match "\\`KEY_\\(.*\\)" key)
+      (setq key (match-string 1 key))
+      (if (equal key "ENTER")
+	  (when bookiez--libinput-queue
+	    (bookiez-add-isbn (string-join (nreverse bookiez--libinput-queue)))
+	    (setq bookiez--libinput-queue nil))
+	(push key bookiez--libinput-queue)))))
 
 (provide 'bookiez)
