@@ -72,8 +72,8 @@ Barcode Scanners
 ================
 
 If you have a lot of books to enter, it's strongly recommended to get
-an ISBN barcode scanner.  I've been using a Datalogic QuickScan Mobile
-QM2131 for over a decade:
+an ISBN barcode scanner.  I've been using a Datalogic Gryphon D120 for
+over a decade:
 
 ![](https://lars.ingebrigtsen.no/?p=114768)
 
