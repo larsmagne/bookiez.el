@@ -46,8 +46,7 @@
 
 (defun bookiez-display-isbn (isbn &optional save)
   (when save
-    (message "Querying %s" isbn)
-    (bookiez-play "71-On the Beach .mp3"))
+    (message "Querying %s" isbn))
   ;; If we have an EAN that contains the ISBN, then chop off the EAN
   ;; stuff and recompute the ISBN.
   (when (and (= (length isbn) 13)
@@ -60,7 +59,7 @@
       (bookiez-display-isbn-1 isbn save)
     ;; If the ISBN is totally invalid, say so before querying.
     (message "Invalid ISBN %s" isbn)
-    (bookiez-play "74-kaffe matthews - still striped .mp3")))
+    :invalid-isbn))
 
 (defvar-keymap bookiez-isbn-minor-mode-map
   "a" #'bookiez-add-book-manually
@@ -108,7 +107,7 @@
     (if (not title)
 	(progn
 	  (message "No match for %s" isbn)
-	  (bookiez-play "45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3"))
+	  :not-found)
       (switch-to-buffer "*Bookiez Book*")
       (let ((inhibit-read-only t))
 	(erase-buffer)
@@ -126,8 +125,8 @@
 					:max-height 800))
 	    (insert "\n")))
 	(goto-char (point-min))
-	(setq bookiez-last-isbn nil)
-	(bookiez-play "61-KREVmorse .mp3")))))
+	(setq bookiez-last-isbn nil))
+      :found)))
 
 (defun bookiez-change-jacket (file)
   "Change the cover jacket image used for the book."
@@ -162,16 +161,13 @@
 	   return (list (nth 1 elem) (nth 0 elem)
 			(nth 3 elem) (nth 5 elem))))
 
-(defun bookiez-play (file)
-  (when (file-exists-p file)
-    (call-process "amixer" nil nil nil "-c" "0" "set" "Speaker" "100%")
-    (start-process
-     "*mpg*" (get-buffer-create "*mpg123*")
-     "mpg123"
-     "-a" "hw:0"
-     ;;"-f" "1000"
-     "-n" "10"
-     (expand-file-name file "/music/repository/Various/Ringtones"))))
+(defun bookiez-play (name)
+  (let ((file (format "%s/assets/%s"
+		      (file-name-directory (find-library-name "bookiez.el"))
+		      name)))
+    (when (file-exists-p file)
+      (call-process "amixer" nil nil nil "-c" "0" "set" "Speaker" "100%")
+      (start-process "*mpg*" nil "mpg123" "-a" "hw:0" "-n" "10" file))))
 
 (defun bookiez-add-ebook-manually ()
   (interactive)
@@ -1054,7 +1050,13 @@ for instance, being notified when they publish a new book."
       (setq key (match-string 1 key))
       (if (equal key "ENTER")
 	  (when bookiez--libinput-queue
-	    (bookiez-add-isbn (string-join (nreverse bookiez--libinput-queue)))
+	    (bookiez-play "71-On the Beach.mp3")
+	    (bookiez-play
+	     (pcase (bookiez-add-isbn
+		     (string-join (nreverse bookiez--libinput-queue)))
+	       (:invalid-isbn "74-kaffe matthews - still striped.mp3")
+	       (:not-found "45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3")
+	       (:found "61-KREVmorse.mp3")))
 	    (setq bookiez--libinput-queue nil))
 	(push key bookiez--libinput-queue)))))
 
