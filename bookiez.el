@@ -285,7 +285,7 @@
   (when start-server
     (bookiez-start-server))
   (when (and bookiez-barcode-device
-	     (not libinput--process))
+	     (not (process-live-p libinput--process)))
     (bookiez--start-libinput))
   (bookiez--possibly-read-database)
   (switch-to-buffer "*Bookiez*")
@@ -1050,14 +1050,17 @@ for instance, being notified when they publish a new book."
       (setq key (match-string 1 key))
       (if (equal key "ENTER")
 	  (when bookiez--libinput-queue
-	    (bookiez-play "71-On the Beach.mp3")
-	    (bookiez-play
-	     (pcase (bookiez-add-isbn
-		     (string-join (nreverse bookiez--libinput-queue)))
-	       (:invalid-isbn "74-kaffe matthews - still striped.mp3")
-	       (:not-found "45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3")
-	       (:found "61-KREVmorse.mp3")))
+	    (bookiez--execute-libinput)
 	    (setq bookiez--libinput-queue nil))
 	(push key bookiez--libinput-queue)))))
+
+(defun bookiez--execute-libinput ()
+  (bookiez-play "71-On the Beach.mp3")
+  (bookiez-play
+   (pcase (bookiez-add-isbn
+	   (string-join (nreverse bookiez--libinput-queue)))
+     (:invalid-isbn "74-kaffe matthews - still striped.mp3")
+     (:not-found "45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3")
+     (:found "61-KREVmorse.mp3"))))
 
 (provide 'bookiez)
