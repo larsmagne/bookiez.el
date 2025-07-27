@@ -1039,8 +1039,7 @@ for instance, being notified when they publish a new book."
 	   (nth 2 (vtable-current-object)))))
 
 (defun bookiez--start-libinput ()
-  (libinput-grab #'bookiez--handle-libinput
-		 bookiez-barcode-device))
+  (libinput-grab #'bookiez--handle-libinput bookiez-barcode-device))
 
 (defvar bookiez--libinput-queue nil)
 
@@ -1062,5 +1061,50 @@ for instance, being notified when they publish a new book."
      (:invalid-isbn "74-kaffe matthews - still striped.mp3")
      (:not-found "45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3")
      (:found "61-KREVmorse.mp3"))))
+
+(defun bookiez--convert-to-json ()
+  (bookiez--massage-json
+   (cl-loop for book in bookiez-books
+	    collect (list 'author (nth 0 book)
+			  'title (nth 1 book)
+			  'isbn (nth 2 book)
+			  'published-date (nth 3 book)
+			  'bought-date (nth 4 book)
+			  'cover-url (nth 5 book)
+			  'format (nth 6 book)
+			  'status
+			  (let ((bits (nthcdr 6 book)))
+			    (cond
+			     ((member "unread" bits)
+			      "unread")
+			     ((cl-loop for elem in bits
+				       when (string-match-p "\\`skipped:" elem)
+				       return t)
+			      "skipped")
+			     ((cl-loop for elem in bits
+				       when (string-match-p "\\`wishlist:" elem)
+				       return t)
+			      "wishlist")
+			     (t "read")))
+			  'read
+			  (cl-loop for elem in (nthcdr 6 book)
+				   when (string-match-p "\\`read:\\(.*\\)"
+							elem)
+				   collect (match-string 1 elem))
+			  'skipped
+			  (cl-loop for elem in (nthcdr 6 book)
+				   when (string-match-p "\\`skipped:\\(.*\\)"
+							elem)
+				   collect (match-string 1 elem))))))
+
+(defun bookiez--massage-json (json)
+  (cl-loop for book in json
+	   collect (cl-loop for (key val) on book by #'cddr
+			    unless (or (and (or (eq key 'read)
+						(eq key 'skipped))
+					    (null val))
+				       (and (eq key 'cover-url)
+					    (equal val "")))
+			    append (list key val))))
 
 (provide 'bookiez)
