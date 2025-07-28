@@ -47,6 +47,11 @@
 (defvar bookiez-barcode-device nil
   "The libinput name of the barcode scanner.")
 
+(defun bookiez-set (book slot value)
+  (if (plist-member book slot)
+      (setf (plist-get book slot) value)
+    (nconc book (list slot value))))
+
 (defun bookiez-display-isbn (isbn &optional save)
   (when save
     (message "Querying %s" isbn))
@@ -161,8 +166,8 @@
 					   (plist-get book :author)))
 		      (title (read-string "New book title: "
 					  (plist-get book :title))))
-		  (setf (plist-get book :author) author)
-		  (setf (plist-get book :title) title)))
+		  (bookiez-set book :author author)
+		  (bookiez-set book :title title)))
     (bookiez-write-database)
     (bookiez-display-isbn-1 isbn)))
 
@@ -235,17 +240,17 @@
 	     (setq do-insert nil))
     (cond
      (do-insert
-      (setf (plist-get new-book :format) (if ebook "ebook" "paper"))
-      (setf (plist-get new-book :status) (if read "read" "unread"))
-      (setf (plist-get new-book :bought-date) (format-time-string "%Y-%m-%d"))
+      (bookiez-set new-book :format (if ebook "ebook" "paper"))
+      (bookiez-set new-book :status (if read "read" "unread"))
+      (bookiez-set new-book :bought-date (format-time-string "%Y-%m-%d"))
       (push new-book bookiez-books)
       (bookiez-write-database))
      (update-read
-      (setf (plist-get update-read :read-dates)
-	    (seq-concatenate 'vector
-			     (plist-get update-read :read-dates)
-			     (vector (format-time-string "%Y-%m-%d"))))
-      (setf (plist-get update-read :status) "read")
+      (bookiez-set update-read :read-dates
+		   (seq-concatenate 'vector
+				    (plist-get update-read :read-dates)
+				    (vector (format-time-string "%Y-%m-%d"))))
+      (bookiez-set update-read :status "read")
       (bookiez-write-database)))))
 
 (defvar bookiez--database-timestamp nil)
@@ -373,7 +378,7 @@ on getting."
       (user-error "No book on the current line"))
     (unless (equal (plist-get book :status) "wishlist")
       (user-error "Not a wishlist item under point"))
-    (setf (plist-get book :status) "bought")
+    (bookiez-set book :status "bought")
     (bookiez-write-database)
     (vtable-update-object (vtable-current-table) book book)))
 
@@ -385,10 +390,10 @@ If given a prefix, don't mark it read on a specific date."
     (unless book
       (error "No book on the current line"))
     (unless unknown-date
-      (setf (plist-get book :read-dates)
-	    (seq-concatenate 'vector (plist-get book :read-dates)
-			     (vector (format-time-string "%Y-%m-%d")))))
-    (setf (plist-get book :status) (or new-status "read"))
+      (bookiez-set book :read-dates
+		   (seq-concatenate 'vector (plist-get book :read-dates)
+				    (vector (format-time-string "%Y-%m-%d")))))
+    (bookiez-set book :status (or new-status "read"))
     (bookiez-write-database)
     (vtable-update-object (vtable-current-table) book book)
     (message "Marked %s as %s" (plist-get book :title)
@@ -401,8 +406,8 @@ If given a prefix, don't mark it read on a specific date."
     (unless book
       (error "No book on the current line"))
     ;; Remove the previous data (if any) and mark as unread.
-    (setf (plist-get book 'read) [])
-    (setf (plist-get book :status) "unread")
+    (bookiez-set book :read [])
+    (bookiez-set book :status "unread")
     (bookiez-write-database)
     (vtable-update-object (vtable-current-table) book book)
     (message "Marked %s as unread" (plist-get book :title))))
@@ -499,7 +504,7 @@ for instance, being notified when they publish a new book."
 	   when (member name authors)
 	   do (let ((new-list (delete name authors)))
 		(push new-name new-list)
-		(setf (plist-get book :author) (string-join new-list ", "))))
+		(bookiez-set book :author (string-join new-list ", "))))
   (bookiez-write-database)
   (forward-line 1)
   (vtable-revert-command))
@@ -727,8 +732,8 @@ for instance, being notified when they publish a new book."
   (let* ((book (vtable-current-object))
 	 (author (read-string "New author name: " (plist-get book :author)))
 	 (title (read-string "New book title: " (plist-get book :title))))
-    (setf (plist-get book :author) author)
-    (setf (plist-get book :title) title)
+    (bookiez-set book :author author)
+    (bookiez-set book :title title)
     (bookiez-write-database)
     (forward-line 1)
     (vtable-revert-command)))
@@ -739,13 +744,14 @@ for instance, being notified when they publish a new book."
   (let ((book (vtable-current-object)))
     (cl-loop for slot in '( :author :title :isbn :published-date :bought-date
 			    :cover-url :format)
-	     do (setf (plist-get book slot)
-		      (read-string
-		       (format "%s: "
-			       (capitalize (substring  (symbol-name slot) 1)))
-		       (plist-get book slot))))
+	     do (bookiez-set
+		 book slot
+		 (read-string
+		  (format "%s: "
+			  (capitalize (substring  (symbol-name slot) 1)))
+		  (plist-get book slot))))
     (when-let ((urls (isbn-covers (plist-get book :isbn))))
-      (setf (plist-get book :cover-url) (car urls))
+      (bookiez-set book :cover-url (car urls))
       (bookiez-cache-image (plist-get book :isbn) (car urls)))
     (bookiez-write-database)))
 
@@ -761,9 +767,9 @@ for instance, being notified when they publish a new book."
 		     (setq data (isbn-search-goodreads string))
 		     (car data))
 	   do
-	   (setf (plist-get book :isbn) (car data))
+	   (bookiez-set book :isbn (car data))
 	   (when (zerop (length (plist-get book :cover-url)))
-	     (setf (plist-get book :cover-url) (cadr data))))
+	     (bookiez-set book :cover-url (cadr data))))
   (bookiez-write-database))
 
 (defun bookiez-missing-isbn ()
@@ -813,7 +819,7 @@ for instance, being notified when they publish a new book."
 			 (string-match "bks[0-9]+.books.google.com" url)))
 	   do (message "Querying %s" (plist-get book :title))
 	   (when-let ((urls (isbn-covers (plist-get book :isbn))))
-	     (setf (plist-get book :cover-url) (car urls))))
+	     (bookiez-set book :cover-url (car urls))))
   (bookiez-write-database))
 
 (defun bookiez-fill-dates ()
@@ -825,7 +831,7 @@ for instance, being notified when they publish a new book."
 	     (message "Querying %s" (plist-get book :title))
 	     (when-let ((data (isbn-lookup isbn)))
 	       (when (nth 2 data)
-		 (setf (plist-get book :published-date) (nth 2 data))
+		 (bookiez-set book :published-date (nth 2 data))
 		 (message "Date for %s is %s" (plist-get book :title)
 			  (plist-get book :isbn))))
 	     (sleep-for 2)))
