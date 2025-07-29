@@ -856,6 +856,18 @@ for instance, being notified when they publish a new book."
     (when-let ((data (isbn-lookup isbn)))
       (nth 4 data))))
 
+(defun bookiez-get-goodreads-genres ()
+  (cl-loop for i from 1
+	   for book in bookiez-books
+	   for isbn = (plist-get book :isbn)
+	   when (isbn-valid-p isbn)
+	   do
+	   (message "Querying %d %s" i (plist-get book :title))
+	   (when-let ((genres (bookiez--lookup-goodreads-genres isbn)))
+	     (bookiez-set book :genre
+			  (cl-coerce (seq-take genres 2) 'vector)))
+	   (sleep-for 2))))
+
 (defun bookiez-list-duplicate-isbn ()
   (pop-to-buffer "*duplicates*")
   (erase-buffer)
