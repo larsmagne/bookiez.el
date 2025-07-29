@@ -526,7 +526,7 @@ for instance, being notified when they publish a new book."
   (setq truncate-lines t)
   (bookiez-isbn-minor-mode 1))
 
-(defvar-keymap bookiez-author-mode-map
+(defvar-keymap bookiez-list-mode-map
   :parent vtable-map
   "RET" #'bookiez-author-display-book
   "l" #'bookiez
@@ -540,6 +540,8 @@ for instance, being notified when they publish a new book."
   "w" #'bookiez-mark-as-wishlist
   "b" #'bookiez-mark-as-bought
   "DEL" #'bookiez-author-delete-book
+  "G" #'bookiez-list-genres
+  "M-g" #'bookiez-edit-genres
   "s" #'bookiez-author-search
   "n" #'bookiez-author-search-new-books
   "m" #'bookiez-author-search-missing-books
@@ -556,7 +558,7 @@ for instance, being notified when they publish a new book."
 	     do (setq chars (nconc chars (list char))))
     (bookiez-add-isbn (seq-into chars 'string))))
 
-(define-derived-mode bookiez-author-mode special-mode "Bookiez"
+(define-derived-mode bookiez-list-mode special-mode "Bookiez"
   "Mode to display books."
   (setq truncate-lines t)
   (bookiez-isbn-minor-mode 1))
@@ -567,7 +569,7 @@ for instance, being notified when they publish a new book."
   (switch-to-buffer "*Bookiez Author*")
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (bookiez-author-mode)
+    (bookiez-list-mode)
     (make-vtable
      :row-colors '("#404040" "#202020")
      :divider-width 2
@@ -587,7 +589,7 @@ for instance, being notified when they publish a new book."
 		   bookiez-books))
      :getter #'bookiez--get-book-data
      :formatter #'bookiez--formatter
-     :keymap bookiez-author-mode-map)))
+     :keymap bookiez-list-mode-map)))
 
 (defun bookiez-author-display-author ()
   "Display the author of the book under point."
@@ -642,7 +644,7 @@ for instance, being notified when they publish a new book."
   (switch-to-buffer "*Bookiez List*")
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (bookiez-author-mode)
+    (bookiez-list-mode)
     (make-vtable
      :row-colors '("#202020" "#000000")
      :columns '((:name "Format")
@@ -653,7 +655,7 @@ for instance, being notified when they publish a new book."
      :objects-function (or selector (lambda () bookiez-books))
      :getter #'bookiez--get-book-data
      :formatter #'bookiez--formatter
-     :keymap bookiez-author-mode-map)))
+     :keymap bookiez-list-mode-map)))
 
 (defun bookiez--formatter (value column table)
   (propertize
@@ -1206,7 +1208,7 @@ for instance, being notified when they publish a new book."
   (interactive (list (completing-read
 		      "Genre: "
 		      (mapcar (lambda (elem)
-				(plist-get elem :genres))
+				(plist-get elem :genre))
 			      (bookiez--genres))
 		      nil t)))
   (let ((selector (lambda ()
@@ -1219,5 +1221,23 @@ for instance, being notified when they publish a new book."
     (unless (funcall selector)
       (user-error "No books in the %s genre" genre))
     (bookiez-list selector)))
+
+(defun bookiez-edit-genres ()
+  "Edit the genre(s) of the book under point."
+  (interactive)
+  (let ((book (vtable-current-object)))
+    (bookiez-set
+     book :genres
+     (cl-coerce
+      (completing-read-multiple "Genres: "
+				(mapcar (lambda (elem)
+					  (plist-get elem :genre))
+					(bookiez--genres))
+				nil nil
+				(string-join (plist-get book :genres) ","))
+      'vector))
+    (message "Updated genres to %s"
+	     (string-join (plist-get book :genres) ","))
+    (bookiez-write-database)))
 
 (provide 'bookiez)
