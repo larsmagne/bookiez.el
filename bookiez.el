@@ -129,6 +129,9 @@
 	(setq-local bookiez-book-isbn (plist-get book :isbn))
 	(insert (plist-get book :author) "\n"
 		(plist-get book :title) "\n\n")
+	(insert "Status " (plist-get book :status) "\n")
+	(unless (equal (plist-get book :format) "paper")
+	  (insert "Format " (plist-get book :format) "\n"))
 	;; Don't output this placeholder date.
 	(unless (equal (plist-get book :published-date) "1970-01-01")
 	  (insert "Published "
