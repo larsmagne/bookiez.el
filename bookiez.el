@@ -1211,8 +1211,10 @@ for instance, being notified when they publish a new book."
 		      nil t)))
   (let ((selector (lambda ()
 		    (cl-loop for book in bookiez-books
-			     when (seq-position (plist-get book :genres) genre
-						#'equal)
+			     when (or (seq-position (plist-get book :genres)
+						    genre #'equal)
+				      (and (equal genre "Unknown")
+					   (null (plist-get book :genres))))
 			     collect book))))
     (unless (funcall selector)
       (user-error "No books in the %s genre" genre))
