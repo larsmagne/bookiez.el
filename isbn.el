@@ -256,7 +256,7 @@ If ALL-RESULTS, return the results from all providors."
 ;;; Goodreads search.
 
 (defvar isbn-ignored-genres '("Fiction" "Audiobook" "Nonfiction"
-			      "Short Stories")
+			      "Short Stories" "Novels")
   "Too-general genres to be ignored.")
 
 (defun isbn-lookup-goodreads (isbn vector index)
