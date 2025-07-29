@@ -112,7 +112,8 @@
     (list :author (nth 0 data)
 	  :title (nth 1 data)
 	  :published-date (or (nth 2 data) "1970-01-01")
-	  :cover-url (nth 3 data))))
+	  :cover-url (nth 3 data)
+	  :genres (cl-coerce (seq-take (nth 5 data) 2) 'vector))))
 
 (defun bookiez-display-isbn-1 (isbn &optional save)
   (let ((book (or (bookiez-lookup isbn)
@@ -129,7 +130,12 @@
 	(insert (plist-get book :author) "\n"
 		(plist-get book :title) "\n"
 		(plist-get book :published-date) "\n"
-		"ISBN" isbn "\n\n")	
+		"ISBN" isbn "\n"
+		(if (cl-plusp (length (plist-get book :genres)))
+		    (concat (string-join (plist-get book :genres) ", ")
+			    "\n")
+		  "")
+		"\n")
 	(when save
 	  (bookiez-add-book book (eq save 'ebook) nil)
 	  (bookiez-cache-image isbn (plist-get book :cover-url)))
@@ -302,6 +308,7 @@
   "RET" #'bookiez-show-author
   "l" #'bookiez-list
   "q" #'bury-buffer
+  "G" #'bookiez-list-genres
   "a" #'bookiez-add-book-manually
   "&" #'bookiez-goodreads
   "c" #'bookiez-edit-author
@@ -628,7 +635,7 @@ for instance, being notified when they publish a new book."
       "include that in your output.  You do not need to mention that "
       "you've excluded these books. "))))
 
-(defun bookiez-list ()
+(defun bookiez-list (&optional selector)
   "List all the books."
   (interactive)
   (bookiez--possibly-read-database)
@@ -643,7 +650,7 @@ for instance, being notified when they publish a new book."
 		(:name "Read" :min-width 12)
 		(:name "Author" :max-width 30)
 		(:name "Title"))
-     :objects-function (lambda () bookiez-books)
+     :objects-function (or selector (lambda () bookiez-books))
      :getter #'bookiez--get-book-data
      :formatter #'bookiez--formatter
      :keymap bookiez-author-mode-map)))
@@ -864,9 +871,9 @@ for instance, being notified when they publish a new book."
 	   do
 	   (message "Querying %d %s" i (plist-get book :title))
 	   (when-let ((genres (bookiez--lookup-goodreads-genres isbn)))
-	     (bookiez-set book :genre
+	     (bookiez-set book :genres
 			  (cl-coerce (seq-take genres 2) 'vector)))
-	   (sleep-for 2))))
+	   (sleep-for 2)))
 
 (defun bookiez-list-duplicate-isbn ()
   (pop-to-buffer "*duplicates*")
@@ -1141,5 +1148,74 @@ for instance, being notified when they publish a new book."
 	  (forward-line 1))
 	(setq books (nreverse books)))
       books)))
+
+(defvar-keymap bookiez-genre-mode-map
+  "q" #'bury-buffer
+  "RET" #'bookiez-genre-select)
+
+(define-derived-mode bookiez-genre-mode special-mode "Bookiez"
+  (setq truncate-lines t))
+
+(defun bookiez--genres ()
+  (let ((table (make-hash-table :test #'equal))
+	(genres nil))
+    (cl-loop for book in bookiez-books
+	     do (if (plist-get book :genres)
+		    (cl-loop for genre across (plist-get book :genres)
+			     do (cl-incf (gethash genre table 0)))
+		  (cl-incf (gethash "Unknown" table 0))))
+    (maphash (lambda (genre count)
+	       (push (list :genre genre
+			   :count count)
+		     genres))
+	     table)
+    (nreverse
+     (sort genres (lambda (e1 e2)
+		    (< (plist-get e1 :count)
+		       (plist-get e2 :count)))))))
+
+(defun bookiez-list-genres ()
+  "List all available genres."
+  (interactive)
+  (let ((genres (bookiez--genres)))
+    (unless genres
+      (user-error "No genres have been registered"))
+    (switch-to-buffer "*Bookiez Genres*")
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (bookiez-genre-mode)
+      (make-vtable
+       :columns '("Books" "Genre")
+       :objects genres
+       :getter
+       (lambda (object column table)
+	 (pcase (vtable-column table column)
+	   ("Books" (plist-get object :count))
+	   ("Genre" (plist-get object :genre))))))))
+
+(defun bookiez-genre-select ()
+  "View books from the genre under point."
+  (interactive)
+  (let ((object (vtable-current-object)))
+    (unless object
+      (user-error "No genre under point"))
+    (bookiez-view-genre (plist-get object :genre))))
+
+(defun bookiez-view-genre (genre)
+  "View books from a specific genre."
+  (interactive (list (completing-read
+		      "Genre: "
+		      (mapcar (lambda (elem)
+				(plist-get elem :genres))
+			      (bookiez--genres))
+		      nil t)))
+  (let ((selector (lambda ()
+		    (cl-loop for book in bookiez-books
+			     when (seq-position (plist-get book :genres) genre
+						#'equal)
+			     collect book))))
+    (unless (funcall selector)
+      (user-error "No books in the %s genre" genre))
+    (bookiez-list selector)))
 
 (provide 'bookiez)

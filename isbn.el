@@ -77,9 +77,15 @@ If ALL-RESULTS, return the results from all providors."
 	   collect cover))
 
 (defun isbn-first-result (result)
-  (cl-loop for elem across result
-	   when (cdr elem)
-	   return (cdr elem)))
+  (let ((first
+	 (cl-loop for elem across result
+		  when (cdr elem)
+		  return (cdr elem))))
+    ;; Extend with genres from Goodreads, if any.
+    (cl-loop for elem across result
+	     when (nth 6 elem)
+	     return (nconc first (list nil (nth 6 elem))))
+    first))
 
 (defun isbn-first-living-buffer (result)
   (cl-loop for elem across result
@@ -249,7 +255,8 @@ If ALL-RESULTS, return the results from all providors."
 
 ;;; Goodreads search.
 
-(defvar isbn-ignored-genres '("Fiction" "Audiobook" "Nonfiction")
+(defvar isbn-ignored-genres '("Fiction" "Audiobook" "Nonfiction"
+			      "Short Stories")
   "Too-general genres to be ignored.")
 
 (defun isbn-lookup-goodreads (isbn vector index)
@@ -280,6 +287,7 @@ If ALL-RESULTS, return the results from all providors."
 				       (parse-time-string (dom-text p))))))
 		(gethash "image" json)
 		;; Also add an extra slot for genres.
+		nil ;; ISBN in the Google result?
 		(cl-loop for span in
 			 (dom-by-class
 			  dom "BookPageMetadataSection__genreButton")
