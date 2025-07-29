@@ -28,6 +28,7 @@
 (require 'query-assistant)
 (require 'multisession)
 (require 'libinput)
+(require 'find-func)
 
 (defvar bookiez-file "~/.emacs.d/bookiez.data"
   "The file where the data will be stored.")

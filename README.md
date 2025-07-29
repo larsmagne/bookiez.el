@@ -24,7 +24,7 @@ published, and when you marked it as read (or "skipped").
 To get started, put the bookiez directory in your load path and
 autoload the top-level command:
 
-    (push "~/src/bookiez/" load-path)
+    (push "~/src/bookiez.el/" load-path)
     (autoload 'bookiez "bookiez" nil t)
 	
 Then just type `M-x bookiez' to start bookiez.
