@@ -128,14 +128,25 @@
 	(bookiez-book-mode)
 	(setq-local bookiez-book-isbn (plist-get book :isbn))
 	(insert (plist-get book :author) "\n"
-		(plist-get book :title) "\n"
-		(plist-get book :published-date) "\n"
-		"ISBN" isbn "\n"
-		(if (cl-plusp (length (plist-get book :genres)))
-		    (concat (string-join (plist-get book :genres) ", ")
-			    "\n")
-		  "")
-		"\n")
+		(plist-get book :title) "\n\n")
+	;; Don't output this placeholder date.
+	(unless (equal (plist-get book :published-date) "1970-01-01")
+	  (insert "Published "
+		  (bookiez--format-date (plist-get book :published-date)) "\n"))
+	(when (plist-get book :bought-date)
+	  (insert "Bought "
+		  (bookiez--format-date (plist-get book :bought-date)) "\n"))
+	(when (plist-get book :read-dates)
+	  (insert "Read "
+		  (mapconcat #'bookiez--format-date 
+			     (plist-get book :read-dates) ", ")
+		  "\n"))
+	(when (isbn-valid-p isbn)
+	  (insert "ISBN " isbn "\n"))
+	(when (cl-plusp (length (plist-get book :genres)))
+	  (insert (string-join (plist-get book :genres) ", ") "\n"))
+	(insert "\n")
+	(put-text-property (point-min) (point-max) 'face 'vtable)
 	(when save
 	  (bookiez-add-book book (eq save 'ebook) nil)
 	  (bookiez-cache-image isbn (plist-get book :cover-url)))
@@ -657,18 +668,19 @@ for instance, being notified when they publish a new book."
      :formatter #'bookiez--formatter
      :keymap bookiez-list-mode-map)))
 
+(defun bookiez--format-date (date)
+  (string-clean-whitespace
+   (format-time-string
+    "%b %e, %Y"
+    (encode-time (decoded-time-set-defaults (iso8601-parse-date date))))))
+	
 (defun bookiez--formatter (value column table)
   (propertize
    (pcase (vtable-column table column)
      ("Read"
       (if (equal value "")
 	  ""
-	(string-clean-whitespace
-	 (format-time-string
-	  "%b %e, %Y"
-	  (encode-time
-	   (decoded-time-set-defaults
-	    (iso8601-parse-date value)))))))
+	(bookiez--format-date value)))
      ("Published"
        (if (equal value "1970-01-01")
 	   ""
