@@ -851,6 +851,11 @@ for instance, being notified when they publish a new book."
 	       (setf (gethash isbn bookiez-goodreads-data) data))
 	     (sleep-for 2))))
 
+(defun bookiez--lookup-goodreads-genres (isbn)
+  (let ((isbn-lookup-types '(goodreads)))
+    (when-let ((data (isbn-lookup isbn)))
+      (nth 4 data))))
+
 (defun bookiez-list-duplicate-isbn ()
   (pop-to-buffer "*duplicates*")
   (erase-buffer)

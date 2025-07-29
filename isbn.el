@@ -249,6 +249,9 @@ If ALL-RESULTS, return the results from all providors."
 
 ;;; Goodreads search.
 
+(defvar isbn-ignored-genres '("Fiction" "Audiobook")
+  "Too-general genres to be ignored.")
+
 (defun isbn-lookup-goodreads (isbn vector index)
   (let ((dummy (get-buffer-create " *goodreads*")))
     (url-retrieve
@@ -257,24 +260,32 @@ If ALL-RESULTS, return the results from all providors."
        (goto-char (point-min))
        (when (search-forward "\n\n" nil t)
 	 (let ((dom (libxml-parse-html-region (point) (point-max))))
-	   (cl-loop for elem in (dom-by-tag dom 'script)
-		    when (equal (dom-attr elem 'type) "application/ld+json")
-		    return
-		    (let ((json (json-parse-string (dom-text elem))))
-		      (setcdr (aref vector index)
-			      (list
-			       (gethash "name" json)
-			       (gethash "name" (elt (gethash "author" json) 0))
-			       (cl-loop for p in (dom-by-tag dom 'p)
-					when (equal (dom-attr p 'data-testid)
-						    "publicationInfo")
-					return
-					(format-time-string
-					 "%Y-%m-%d" (encode-time
-						     (decoded-time-set-defaults
-						      (parse-time-string
-						       (dom-text p))))))
-			       (gethash "image" json)))))))
+	   (cl-loop
+	    for elem in (dom-by-tag dom 'script)
+	    when (equal (dom-attr elem 'type) "application/ld+json")
+	    return
+	    (let ((json (json-parse-string (dom-text elem))))
+	      (setcdr
+	       (aref vector index)
+	       (list
+		(gethash "name" json)
+		(gethash "name" (elt (gethash "author" json) 0))
+		(cl-loop for p in (dom-by-tag dom 'p)
+			 when (equal (dom-attr p 'data-testid)
+				     "publicationInfo")
+			 return
+			 (format-time-string
+			  "%Y-%m-%d" (encode-time
+				      (decoded-time-set-defaults
+				       (parse-time-string (dom-text p))))))
+		(gethash "image" json)
+		;; Also add an extra slot for genres.
+		(cl-loop for span in
+			 (dom-by-class
+			  dom "BookPageMetadataSection__genreButton")
+			 for genre = (dom-texts span)
+			 unless (member genre isbn-ignored-genres)
+			 collect genre)))))))
        (kill-buffer (current-buffer))
        ;; We use the dummy buffer as the synchronising thing with
        ;; `isbn-lookup' because Goodreads will redirect us to a
