@@ -1179,21 +1179,20 @@ for instance, being notified when they publish a new book."
 (defun bookiez-list-genres ()
   "List all available genres."
   (interactive)
-  (let ((genres (bookiez--genres)))
-    (unless genres
-      (user-error "No genres have been registered"))
-    (switch-to-buffer "*Bookiez Genres*")
-    (let ((inhibit-read-only t))
-      (erase-buffer)
-      (bookiez-genre-mode)
-      (make-vtable
-       :columns '("Books" "Genre")
-       :objects genres
-       :getter
-       (lambda (object column table)
-	 (pcase (vtable-column table column)
-	   ("Books" (plist-get object :count))
-	   ("Genre" (plist-get object :genre))))))))
+  (unless (bookiez--genres)
+    (user-error "No genres have been registered"))
+  (switch-to-buffer "*Bookiez Genres*")
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (bookiez-genre-mode)
+    (make-vtable
+     :columns '("Books" "Genre")
+     :objects-function #'bookiez--genres
+     :getter
+     (lambda (object column table)
+       (pcase (vtable-column table column)
+	 ("Books" (plist-get object :count))
+	 ("Genre" (plist-get object :genre)))))))
 
 (defun bookiez-genre-select ()
   "View books from the genre under point."
