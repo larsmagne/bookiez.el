@@ -69,6 +69,26 @@ If ALL-RESULTS, return the results from all providors."
 	(mapcar #'cdr result)
       (isbn-first-result result))))
 
+(defun isbn-format (isbn)
+  (cond
+   ;; 978-1-56619-909-4
+   ((length= isbn 13)
+    (format "%s-%s-%s-%s-%s"
+	    (subseq isbn 0 3)
+	    (subseq isbn 3 4)
+	    (subseq isbn 4 9)
+	    (subseq isbn 9 12)
+	    (subseq isbn 12)))
+   ;; 0-321-57346-X
+   ((length= isbn 10)
+    (format "%s-%s-%s-%s"
+	    (subseq isbn 0 1)
+	    (subseq isbn 1 4)
+	    (subseq isbn 4 9)
+	    (subseq isbn 9)))
+   (t
+    isbn)))
+
 (defun isbn-covers (isbn)
   "Return cover URLs for ISBN."
   (cl-loop for result in (isbn-lookup isbn t)

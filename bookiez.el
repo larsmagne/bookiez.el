@@ -146,7 +146,7 @@
 			     (plist-get book :read-dates) ", ")
 		  "\n"))
 	(when (isbn-valid-p isbn)
-	  (insert "ISBN " isbn "\n"))
+	  (insert "ISBN " (isbn-format isbn) "\n"))
 	(when (cl-plusp (length (plist-get book :genres)))
 	  (insert (mapconcat
 		   (lambda (genre)
