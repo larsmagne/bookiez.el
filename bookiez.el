@@ -352,8 +352,7 @@
     (erase-buffer)
     (bookiez-mode)
     (setq truncate-lines t)
-    (let* ((tracked (multisession-value bookiez-tracked-authors))
-	   (table
+    (let* ((table
 	    (make-vtable
 	     :columns '((:name "Tracked" :min-width 6)
 			(:name "Books" :min-width 6)
@@ -365,27 +364,29 @@
 		  (if (car object) "✴️" ""))
 		 (_
 		  (elt object column))))
-	     :objects-function
-	     (lambda ()
-	       (let ((authors (make-hash-table :test #'equal)))
-		 (dolist (book bookiez-books)
-		   (dolist (author (split-string (plist-get book :author) ", "))
-		     (cl-incf (gethash author authors 0))))
-		 (sort
-		  (let ((res nil))
-		    (maphash (lambda (k v)
-			       (push (list (member k tracked) v k)
-				     res))
-			     authors)
-		    res)
-		  (lambda (a1 a2)
-		    (string< (caddr a1) (caddr a2))))))
+	     :objects-function #'bookiez--overview-entries
 	     :keymap bookiez-mode-map)))
       ;; This may not exist in all vtable versions.
       (when (fboundp 'vtable-comparitor)
 	(setf (vtable-comparitor table)
 	      (lambda (o1 o2)
 		(equal (nth 2 o1) (nth 2 o2))))))))
+
+(defun bookiez--overview-entries ()
+  (let ((tracked (multisession-value bookiez-tracked-authors))
+	(authors (make-hash-table :test #'equal)))
+    (dolist (book bookiez-books)
+      (dolist (author (split-string (plist-get book :author) ", "))
+	(cl-incf (gethash author authors 0))))
+    (sort
+     (let ((res nil))
+       (maphash (lambda (k v)
+		  (push (list (member k tracked) v k)
+			res))
+		authors)
+       res)
+     (lambda (a1 a2)
+       (string< (caddr a1) (caddr a2))))))
 
 (defun bookiez-mark-as-skipped ()
   "Mark the book under point as skipped."
@@ -603,15 +604,17 @@ for instance, being notified when they publish a new book."
 		(:name "Bought" :width 5)
 		(:name "Read" :min-width 12)
 		(:name "Title" :min-width 80))
-     :objects-function
-     (lambda ()
-       (seq-filter (lambda (book)
-		     (member author
-			     (split-string (plist-get book :author) ", ")))
-		   bookiez-books))
+     :objects-function (lambda ()
+			 (bookiez--author-books author))
      :getter #'bookiez--get-book-data
      :formatter #'bookiez--formatter
      :keymap bookiez-list-mode-map)))
+
+(defun bookiez--author-books (author)
+  (seq-filter (lambda (book)
+		(member author
+			(split-string (plist-get book :author) ", ")))
+	      bookiez-books))
 
 (defun bookiez-author-display-author ()
   "Display the author of the book under point."
@@ -1233,16 +1236,18 @@ for instance, being notified when they publish a new book."
 				(plist-get elem :genre))
 			      (bookiez--genres))
 		      nil t)))
-  (let ((selector (lambda ()
-		    (cl-loop for book in bookiez-books
-			     when (or (seq-position (plist-get book :genres)
-						    genre #'equal)
-				      (and (equal genre "Unknown")
-					   (null (plist-get book :genres))))
-			     collect book))))
+  (let ((selector (lambda () (bookiez--genre-books genre))))
     (unless (funcall selector)
       (user-error "No books in the %s genre" genre))
     (bookiez-list selector)))
+
+(defun bookiez--genre-books (genre)
+  (cl-loop for book in bookiez-books
+	   when (or (seq-position (plist-get book :genres)
+				  genre #'equal)
+		    (and (equal genre "Unknown")
+			 (null (plist-get book :genres))))
+	   collect book))
 
 (defun bookiez-edit-genres ()
   "Edit the genre(s) of the book under point."
@@ -1261,5 +1266,80 @@ for instance, being notified when they publish a new book."
     (message "Updated genres to %s"
 	     (string-join (plist-get book :genres) ","))
     (bookiez-write-database)))
+
+;;; Export data to other format.
+
+(defvar bookiez-export-html-directory "/var/tmp/bookiez-html/"
+  "The directory where HTML exports will be written to.")
+
+(defun bookiez--export-html ()
+  (let ((dir boozies-export-html-directory))
+    (unless (file-exists-p dir)
+      (make-directory dir))
+    (bookiez--export-html-overview)
+    ))
+
+(defmacro bookiez--html (title &rest body)
+  (declare (debug t) (indent 1))
+  `(with-temp-buffer
+     (let ((title ,title))
+       (insert (format "<head><title>%s</title><meta charset='utf-8'>"
+		       (capitalize title)))
+       (insert (format "<table class='%s'>" title))
+       ,@body
+       (write-region
+	(point-min) (point-max)
+	(expand-file-name (format "%s.html" (bookiez--file-name title))
+			  bookiez-export-html-directory)
+	nil 'silent)
+       (insert "</table>")
+       (insert (format
+		"<span class='credits'>Sent from by <a href='https://github.com/larsmagne/bookiez.el'>bookiez</a>")))))
+  
+(defun bookiez--export-html-overview ()
+  (bookiez--html "overview"
+    (cl-loop for elem in (bookiez--overview-entries)
+	     do (insert (format "<tr><td>%s<td><a href='author-%s'>%s</a><td>"
+				(nth 1 elem)
+				(bookiez--file-name (nth 2 elem))
+				(nth 2 elem)))
+	     (bookiez--export-html-author (nth 2 elem)))))
+
+(defun bookiez--file-name (name)
+  (replace-regexp-in-string "[^0-9a-zA-Z]" "_" name))
+
+(defun bookiez--export-html-author (author)
+  (bookiez--html "author"
+    (bookiez--export-html-books (bookiez--author-books author))))
+
+(defun bookiez--export-html-books (books)
+  (cl-loop for book in books
+	   do (insert
+	       (format
+		"<tr><td>%s<td>%s<td>%s<td>%s<td><a href='author-%s.html'>%s</a><td><a href='book-%s.html'>%s</a></tr>"
+		(if (equal (plist-get book :format) "paper")
+		    "<span title='paper'>📘</span>"
+		  "<span title='ebook'>📄</span>")
+		(cond
+		 ((equal (plist-get book :status) "unread")
+		  "<span title='unread'>🟣</span>")
+		 ((equal (plist-get book :status) "skipped")
+		  "<span title='skipped'>❌</span>")
+		 ((equal (plist-get book :status) "wishlist")
+		  "<span title='wishlist'>🎇</span>")
+		 (t
+		  "<span title='read'>✔️</span>"))
+		(plist-get book :published-date)
+		(or (elt (plist-get book :read-dates) 0) "")
+		(concat "author-" (bookiez--file-name (plist-get book :author))
+			".html")
+		(plist-get book :author)
+		(concat "title-" (bookiez--file-name (plist-get book :title))
+			".html")
+		(plist-get book :title)))))
+
+(defun bookiez--export-html-genre (genre)
+  (bookiez--html genre
+    (bookiez--export-html-books (bookiez--genre-books genre))))
 
 (provide 'bookiez)
