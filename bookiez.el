@@ -148,9 +148,16 @@
 	(when (isbn-valid-p isbn)
 	  (insert "ISBN " isbn "\n"))
 	(when (cl-plusp (length (plist-get book :genres)))
-	  (insert (string-join (plist-get book :genres) ", ") "\n"))
+	  (insert (mapconcat
+		   (lambda (genre)
+		     (buttonize genre (lambda (genre)
+					(bookiez-view-genre genre))
+				genre))
+		   (plist-get book :genres)
+		   ", ")
+		  "\n"))
 	(insert "\n")
-	(put-text-property (point-min) (point-max) 'face 'vtable)
+	(add-face-text-property (point-min) (point-max) 'vtable)
 	(when save
 	  (bookiez-add-book book (eq save 'ebook) nil)
 	  (bookiez-cache-image isbn (plist-get book :cover-url)))
