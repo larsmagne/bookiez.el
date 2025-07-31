@@ -79,6 +79,10 @@ bookiez-export-html' command.  Afterwards, just put the resulting
 files in a directory on a web server.  The top-level HTML file will be
 called "authors.html".
 
+The assets/bookiez.css file can be edited to adjust the look.  All the
+elements should have semi-logical names to allow you to style (or
+remove) elements as needed without changing the code.
+
 Barcode Scanners
 ================
 
