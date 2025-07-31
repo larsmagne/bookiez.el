@@ -1288,9 +1288,17 @@ for instance, being notified when they publish a new book."
 (defvar bookiez-export-html-directory "/var/tmp/bookiez-html/"
   "The directory where HTML exports will be written to.")
 
+(defvar bookiez-export-html-command nil
+  "Command to be run after generating the HTML.
+
+For instance, to deploy to a web server, you could set this to:
+
+  rsync -av /var/tmp/bookiez-html/ www@server-name:html/bookiez/")
+
 (defun bookiez-export-html ()
   "Export the database to HTML.
-It will be written to `bookiez-export-html-directory'."
+It will be written to `bookiez-export-html-directory'.  Also see
+`bookiez-export-html-command'."
   (interactive)
   (let ((dir bookiez-export-html-directory))
     (message "Exporting...")
@@ -1303,7 +1311,11 @@ It will be written to `bookiez-export-html-directory'."
     (bookiez--generate-html-genres)
     (bookiez--export-html-overview)
     (bookiez--export-html-isbns)
-    (message "Exporting...done to %s" bookiez-export-html-directory)))
+    (message "Exporting...done to %s" bookiez-export-html-directory)
+    (when bookiez-export-html-command
+      (message "Deploying %s..." bookiez-export-html-command)
+      (shell-command bookiez-export-html-command)
+      (message "Deploying %s...done" bookiez-export-html-command))))
 
 (defmacro bookiez--html (class title file-name &rest body)
   (declare (debug t) (indent 3))
