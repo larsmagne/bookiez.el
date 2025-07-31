@@ -91,7 +91,7 @@ div.links > span {
   font-weight: normal;
 }
 
-table.genre td:nth-of-type(4), table.genre td:nth-of-type(5) {
+td.date {
   white-space: nowrap;
 }
 

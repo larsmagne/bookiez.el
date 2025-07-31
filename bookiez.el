@@ -1365,7 +1365,9 @@ for instance, being notified when they publish a new book."
 
 (defun bookiez--export-html-books (books &optional inhibit-author)
   (insert "<tr><th>Cover"
-	  "<th>Format<th>Status<th>Published<th>Read"
+	  "<th>Format<th>Status<th>Published"
+	  (if inhibit-author "<th>Bought" "")
+	  "<th>Read"
 	  (if inhibit-author "" "<th>Author")
 	  "<th>Title</tr>")
   (cl-loop for book in books
@@ -1377,7 +1379,7 @@ for instance, being notified when they publish a new book."
 			      (bookiez--html-img-file book t)))))
 	   (insert
 	    (format
-	     "<td>%s<td>%s<td>%s<td>%s%s<td><a href='%s.html'>%s</a></tr>"
+	     "<td>%s<td>%s<td class='date'>%s%s<td class='date'>%s%s<td><a href='%s.html'>%s</a></tr>"
 	     (if (equal (plist-get book :format) "paper")
 		 "<span title='paper'>📘</span>"
 	       "<span title='ebook'>📄</span>")
@@ -1391,6 +1393,13 @@ for instance, being notified when they publish a new book."
 	      (t
 	       "<span title='read'>✔️</span>"))
 	     (bookiez--format-date (plist-get book :published-date))
+	     (if (not inhibit-author)
+		 ""
+	       (concat
+		"<td class='date'>"
+		(if (plist-get book :bought-date)
+		    (bookiez--format-date (plist-get book :bought-date))
+		  "")))
 	     (if (cl-plusp (length (plist-get book :read-dates)))
 		 (bookiez--format-date (elt (plist-get book :read-dates) 0))
 	       "")
