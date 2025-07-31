@@ -1321,11 +1321,17 @@ It will be written to `bookiez-export-html-directory'."
        (insert "</table>")
        (insert (format
 		"<div class='credits'>Sent from my <a href='https://github.com/larsmagne/bookiez.el'>bookiez</a>."))
-       (write-region
-	(point-min) (point-max)
-	(expand-file-name (format "%s.html" (bookiez--file-name file-name))
-			  bookiez-export-html-directory)
-	nil 'silent))))
+       (let ((file (expand-file-name
+		    (format "%s.html" (bookiez--file-name file-name))
+		    bookiez-export-html-directory)))
+	 ;; Only write the file if it's different -- this avoids
+	 ;; excessive rsyncing when updating the web site.
+	 (when (or (not (file-exists-p file))
+		   (not (equal (buffer-hash)
+			       (with-temp-buffer
+				 (insert-file-contents file)
+				 (buffer-hash)))))
+	   (write-region (point-min) (point-max) file nil 'silent))))))
 
 (defun bookiez--author-sort-key (author)
   (string-join (reverse (cl-loop with name = (split-string author)
@@ -1397,7 +1403,9 @@ It will be written to `bookiez-export-html-directory'."
 	       "<span title='wishlist'>🎇</span>")
 	      (t
 	       "<span title='read'>✔️</span>"))
-	     (bookiez--format-date (plist-get book :published-date))
+	     (if (equal (plist-get book :published-date) "1970-01-01")
+		 ""
+	       (bookiez--format-date (plist-get book :published-date)))
 	     (if (not inhibit-author)
 		 ""
 	       (concat
