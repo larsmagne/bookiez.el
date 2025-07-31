@@ -1280,6 +1280,7 @@ for instance, being notified when they publish a new book."
 		       "assets/bookiez.css")
 	       (expand-file-name "bookiez.css" dir)
 	       t)
+    (bookiez--generate-html-genres)
     (bookiez--export-html-overview)
     (bookiez--export-html-isbns)))
 
@@ -1292,6 +1293,7 @@ for instance, being notified when they publish a new book."
        (insert (format "<head><title>%s</title><meta charset='utf-8'>" title))
        (insert "<link href='bookiez.css' rel='stylesheet' type='text/css'>")
        (insert (format "<body class='%s'>" class))
+       (insert "<div class='top'><a href='authors.html'>💠</a></div>")
        (insert "<h1 class='title'>" title "</h1>")
        (insert (format "<table class='%s'>" class))
        ,@body
@@ -1333,37 +1335,46 @@ for instance, being notified when they publish a new book."
     (bookiez--export-html-books (bookiez--author-books author) t)))
 
 (defun bookiez--export-html-books (books &optional inhibit-author)
-  (insert "<tr><th>Format<th>Status<th>Published<th>Read<th>Title</tr>")
+  (insert "<tr>"
+	  (if inhibit-author "<th>Cover" "")
+	  "<th>Format<th>Status<th>Published<th>Read"
+	  (if inhibit-author "" "<th>Author")
+	  "<th>Title</tr>")
   (cl-loop for book in books
-	   do (insert
+	   do
+	   (insert "<tr>")
+	   (when inhibit-author
+	     (insert "<td>")
+	     (when (file-exists-p (bookiez--cache-file (plist-get book :isbn)))
+	       (insert (format "<img class='cover' src='%s'>"
+			       (bookiez--html-img-file book)))))
+	   (insert
+	    (format
+	     "<td>%s<td>%s<td>%s<td>%s%s<td><a href='%s.html'>%s</a></tr>"
+	     (if (equal (plist-get book :format) "paper")
+		 "<span title='paper'>📘</span>"
+	       "<span title='ebook'>📄</span>")
+	     (cond
+	      ((equal (plist-get book :status) "unread")
+	       "<span title='unread'>🟣</span>")
+	      ((equal (plist-get book :status) "skipped")
+	       "<span title='skipped'>❌</span>")
+	      ((equal (plist-get book :status) "wishlist")
+	       "<span title='wishlist'>🎇</span>")
+	      (t
+	       "<span title='read'>✔️</span>"))
+	     (bookiez--format-date (plist-get book :published-date))
+	     (if (cl-plusp (length (plist-get book :read-dates)))
+		 (bookiez--format-date (elt (plist-get book :read-dates) 0))
+	       "")
+	     (if inhibit-author
+		 ""
 	       (format
-		"<tr><td>%s<td>%s<td>%s<td>%s%s<td><a href='%s.html'>%s</a></tr>"
-		(if (equal (plist-get book :format) "paper")
-		    "<span title='paper'>📘</span>"
-		  "<span title='ebook'>📄</span>")
-		(cond
-		 ((equal (plist-get book :status) "unread")
-		  "<span title='unread'>🟣</span>")
-		 ((equal (plist-get book :status) "skipped")
-		  "<span title='skipped'>❌</span>")
-		 ((equal (plist-get book :status) "wishlist")
-		  "<span title='wishlist'>🎇</span>")
-		 (t
-		  "<span title='read'>✔️</span>"))
-		(bookiez--format-date (plist-get book :published-date))
-		(if (cl-plusp (length (plist-get book :read-dates)))
-		    (bookiez--format-date (elt (plist-get book :read-dates) 0))
-		  "")
-		(if inhibit-author
-		    ""
-		  (format
-		   "<td><a href='author-%s.html'>%s</a>"
-		   (concat "author-"
-			   (bookiez--file-name (plist-get book :author))
-			   ".html")
-		   (plist-get book :author)))
-		(concat "isbn-" (bookiez--file-name (plist-get book :isbn)))
-		(plist-get book :title)))))
+		"<td><a href='author-%s.html'>%s</a>"
+		(concat (bookiez--file-name (plist-get book :author)))
+		(plist-get book :author)))
+	     (concat "isbn-" (bookiez--file-name (plist-get book :isbn)))
+	     (plist-get book :title)))))
 
 (defun bookiez--export-html-genre (genre)
   (bookiez--html "genre" (concat "Genre: " genre)
@@ -1410,22 +1421,17 @@ for instance, being notified when they publish a new book."
 	  (insert "<div class='genres'>"
 		  (mapconcat
 		   (lambda (genre)
-		     (concat "<span class='genre'>" genre "</span>"))
+		     (concat "<span class='genre'><a href='genre-"
+			     (bookiez--file-name genre)
+			     ".html'>"
+			     genre "</a></span>"))
 		   (plist-get book :genres)
 		   ", ")
 		  "</div>"))
-	(let ((file (bookiez--cache-file (plist-get book :isbn))))
-	  (when (file-exists-p file)
-	    (let ((img (expand-file-name
-			(concat "isbn-"
-				(bookiez--file-name (plist-get book :isbn))
-				"." (file-name-extension file))
-			bookiez-export-html-directory)))
-	      (unless (file-exists-p img)
-		(copy-file file img))
-	      (insert "<div class='cover-image'><img src='"
-		      (file-name-nondirectory img)
-		      "'></div>"))))
+	(when-let ((img (bookiez--html-img-file book)))
+	  (insert "<div class='cover-image'><img src='"
+		  (file-name-nondirectory img)
+		  "'></div>"))
 	(when (isbn-valid-p (plist-get book :isbn))
 	  (insert "<div class='links'>")
 	  (insert (format "<span class='goodreads'><a href='https://www.goodreads.com/search?q=%s'>Goodreads</a></span>, "
@@ -1433,5 +1439,23 @@ for instance, being notified when they publish a new book."
 	  (insert (format "<span class='goodreads'><a href='https://www.biblio.com/%s'>Biblio</a></span>"
 			  (plist-get book :isbn)))
 	  (insert "</div>")))))
+
+(defun bookiez--html-img-file (book)
+  (let ((file (bookiez--cache-file (plist-get book :isbn))))
+    (when (file-exists-p file)
+      (let ((img (expand-file-name
+		  (concat "isbn-"
+			  (bookiez--file-name (plist-get book :isbn))
+			  "." (file-name-extension file))
+		  bookiez-export-html-directory)))
+	(unless (file-exists-p img)
+	  (copy-file file img))
+	img))))
+
+(defun bookiez--generate-html-genres ()
+  (dolist (genre (mapcar (lambda (elem) (plist-get elem :genre))
+			 (bookiez--genres)))
+    (bookiez--html "genre" genre (concat "genre-" genre)
+      (bookiez--export-html-books (bookiez--genre-books genre)))))
 
 (provide 'bookiez)
