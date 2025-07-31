@@ -49,9 +49,19 @@
   "The libinput name of the barcode scanner.")
 
 (defun bookiez-set (book slot value)
-  (if (plist-member book slot)
-      (setf (plist-get book slot) value)
-    (nconc book (list slot value))))
+  ;; Note: Can't remove the :author slot, since it's first.
+  (if (null value)
+      (progn
+	(pop book)
+	(while (and (cdr book)
+		    (not (eq slot (cadr book))))
+	  (setq book (cddr book)))
+	;; Remove the entry.
+	(when (cdr book)
+	  (setcdr book (cdddr book))))
+    (if (plist-member book slot)
+	(setf (plist-get book slot) value)
+      (nconc book (list slot value)))))
 
 (defun bookiez-display-isbn (isbn &optional save)
   (when save
@@ -710,12 +720,8 @@ for instance, being notified when they publish a new book."
 	   ""
 	 (substring value 0 4)))
      ("Bought"
-      ;; Registration started in 2013, so the data before that
-      ;; isn't accurate.  And the second date is when ebook data
-      ;; was imported, so it's not accurate either.
       (cond
-       ((or (string< value "2013-02-01")
-	    (equal value "2025-04-14"))
+       ((null value)
 	"")
        ((< (length value) 4)
 	value)
@@ -1487,5 +1493,11 @@ for instance, being notified when they publish a new book."
 			 (bookiez--genres)))
     (bookiez--html "genre" genre (concat "genre-" genre)
       (bookiez--export-html-books (bookiez--genre-books genre)))))
+
+(defun bookiez--clear-bought-date (date)
+  (dolist (book bookiez-books)
+    (when (and (plist-get book :bought-date)
+	       (string= (plist-get book :bought-date) date))
+      (bookiez-set book :bought-date nil))))
 
 (provide 'bookiez)
