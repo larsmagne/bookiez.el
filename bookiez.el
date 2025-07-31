@@ -191,6 +191,8 @@
   (interactive nil bookiez-book-mode)
   (let ((book (bookiez-lookup bookiez-book-isbn)))
     (cl-loop for isbn in (cons bookiez-book-isbn
+			       ;; There may be other ISBNs for
+			       ;; this book where there is a cover.
 			       (isbn-isbns-librarything bookiez-book-isbn))
 	     while
 	     (not
@@ -213,6 +215,8 @@
 	       return
 	       (progn
 		 (bookiez-set book :cover-url cover)
+		 (unless (equal isbn bookiez-book-isbn)
+		   (bookiez-set book :cover-isbn isbn))
 		 t))))
     (bookiez-write-database)
     (if (cl-plusp (length (plist-get book :cover-url)))
