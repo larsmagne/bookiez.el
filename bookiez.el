@@ -1315,7 +1315,7 @@ for instance, being notified when they publish a new book."
 
 (defun bookiez--export-html-overview ()
   (bookiez--html "authors" "Authors" "authors"
-    (insert "<tr><th>Book#<th>Author</tr>")
+    (insert "<tr><th>Book#<th>Author<th>Covers</tr>")
     (cl-loop for elem in (sort
 			  (bookiez--overview-entries)
 			  (lambda (e1 e2)
@@ -1325,6 +1325,12 @@ for instance, being notified when they publish a new book."
 				(nth 1 elem)
 				(bookiez--file-name (nth 2 elem))
 				(nth 2 elem)))
+	     (insert "<td>")
+	     (dolist (book (bookiez--author-books (nth 2 elem)))
+	       (when-let ((img (bookiez--html-img-file book t)))
+		 (insert (format "<a href='isbn-%s.html'><img class='cover' src='%s'></a>"
+				 (bookiez--file-name (plist-get book :isbn))
+				 (file-name-nondirectory img)))))
 	     (bookiez--export-html-author (nth 2 elem)))))
 
 (defun bookiez--file-name (name)
@@ -1335,19 +1341,17 @@ for instance, being notified when they publish a new book."
     (bookiez--export-html-books (bookiez--author-books author) t)))
 
 (defun bookiez--export-html-books (books &optional inhibit-author)
-  (insert "<tr>"
-	  (if inhibit-author "<th>Cover" "")
+  (insert "<tr><th>Cover"
 	  "<th>Format<th>Status<th>Published<th>Read"
 	  (if inhibit-author "" "<th>Author")
 	  "<th>Title</tr>")
   (cl-loop for book in books
 	   do
-	   (insert "<tr>")
-	   (when inhibit-author
-	     (insert "<td>")
-	     (when (file-exists-p (bookiez--cache-file (plist-get book :isbn)))
-	       (insert (format "<img class='cover' src='%s'>"
-			       (bookiez--html-img-file book)))))
+	   (insert "<tr><td>")
+	   (when (file-exists-p (bookiez--cache-file (plist-get book :isbn)))
+	     (insert (format "<img class='cover' src='%s'>"
+			     (file-name-nondirectory
+			      (bookiez--html-img-file book t)))))
 	   (insert
 	    (format
 	     "<td>%s<td>%s<td>%s<td>%s%s<td><a href='%s.html'>%s</a></tr>"
@@ -1440,7 +1444,7 @@ for instance, being notified when they publish a new book."
 			  (plist-get book :isbn)))
 	  (insert "</div>")))))
 
-(defun bookiez--html-img-file (book)
+(defun bookiez--html-img-file (book &optional return-small)
   (let ((file (bookiez--cache-file (plist-get book :isbn))))
     (when (file-exists-p file)
       (let ((img (expand-file-name
@@ -1450,7 +1454,15 @@ for instance, being notified when they publish a new book."
 		  bookiez-export-html-directory)))
 	(unless (file-exists-p img)
 	  (copy-file file img))
-	img))))
+	(let ((small (expand-file-name
+		      (concat "small-isbn-"
+			      (bookiez--file-name (plist-get book :isbn))
+			      ".jpg")
+		      bookiez-export-html-directory)))
+	  (unless (file-exists-p small)
+	    (call-process "convert" nil nil nil
+			  "-resize" "x100" file small))
+	  (if return-small small img))))))
 
 (defun bookiez--generate-html-genres ()
   (dolist (genre (mapcar (lambda (elem) (plist-get elem :genre))
