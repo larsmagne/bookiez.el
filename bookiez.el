@@ -1420,7 +1420,7 @@ for instance, being notified when they publish a new book."
 		  "</div>"))
 	(when (isbn-valid-p (plist-get book :isbn))
 	  (insert "<div class='isbn'>ISBN <span class='isbn'>"
-		  (plist-get book :isbn) "</span></div>"))
+		  (isbn-format (plist-get book :isbn)) "</span></div>"))
 	(when (cl-plusp (length (plist-get book :genres)))
 	  (insert "<div class='genres'>"
 		  (mapconcat
