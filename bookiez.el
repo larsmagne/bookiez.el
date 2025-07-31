@@ -108,6 +108,7 @@
   "q" #'bury-buffer
   "J" #'bookiez-change-jacket
   "j" #'bookiez-query-jacket
+  "f" #'bookiez-find-isbn
   "c" #'bookiez-book-edit)
 
 (defvar bookiez-book-isbn nil)
@@ -125,6 +126,22 @@
 	  :published-date (or (nth 2 data) "1970-01-01")
 	  :cover-url (nth 3 data)
 	  :genres (cl-coerce (seq-take (nth 5 data) 2) 'vector))))
+
+(defun bookiez-find-isbn ()
+  "Find the correct ISBN for the current book."
+  (interactive)
+  (let* ((book (bookiez-lookup bookiez-book-isbn))
+	 (search (read-string "Search for: "
+			      (format "%s %s" (plist-get book :author)
+				      (plist-get book :title))))
+	 (data (isbn-search-goodreads search)))
+    (if (not data)
+	(message "Couldn't find anything")
+      (bookiez-set book :isbn (car data))
+      (when (zerop (length (plist-get book :cover-url)))
+	(bookiez-set book :cover-url (cadr data)))
+      (bookiez-display-isbn-1 (car data))
+      (bookiez-write-database))))
 
 (defun bookiez-display-isbn-1 (isbn &optional save)
   (let ((book (or (bookiez-lookup isbn)
@@ -280,8 +297,14 @@
 		thumb (cadr match)))))
     (unless isbn
       (setq isbn (read-string "ISBN: ")))
+    ;; If we have no ISBN, then use a fake one.
     (when (zerop (length isbn))
-      (setq isbn (format "%s" (cl-decf bookiez--unknown-isbn))))
+      (let ((table (make-hash-table :test #'equal)))
+	(dolist (book bookiez-books)
+	  (setf (gethash (plist-get book :isbn) table) t))
+	(while (gethash (format "%s" bookiez--unknown-isbn) table)
+	  (cl-decf bookiez--unknown-isbn))
+	(setq isbn (format "%s" bookiez--unknown-isbn))))
     (bookiez-add-book (list :author author
 			    :title title
 			    :isbn isbn
@@ -1433,7 +1456,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 (defun bookiez--export-html-overview ()
   (bookiez--html "authors" "Authors" "authors"
     (insert
-     "<tr><th class='count'>Book#<th>Author<th class='covers'>Covers</tr>")
+     "<tr><th class='count'>Books<th>Author<th class='covers'>Covers</tr>")
     (cl-loop for elem in (sort
 			  (bookiez--overview-entries
 			   (bookiez--filter-export bookiez-books))
@@ -1620,5 +1643,14 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (when (and (plist-get book :bought-date)
 	       (string= (plist-get book :bought-date) date))
       (bookiez-set book :bought-date nil))))
+
+(defun bookiez--check-duplicate-isbn ()
+  (let ((table (make-hash-table :test #'equal)))
+    (dolist (book bookiez-books)
+      (when (gethash (plist-get book :isbn) table)
+	(message "Duplicate %s %s %s" (plist-get book :author)
+		 (plist-get book :title)
+		 (plist-get book :isbn)))
+      (setf (gethash (plist-get book :isbn) table) t))))
 
 (provide 'bookiez)
