@@ -1571,7 +1571,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	(when (or (not (file-exists-p img))
 		  (file-newer-than-file-p file img))
 	  (remhash img bookiez--image-size-table)
-	  (copy-file file img))
+	  (copy-file file img t))
 	(let ((small (expand-file-name
 		      (concat "small-isbn-"
 			      (bookiez--file-name (plist-get book :isbn))
