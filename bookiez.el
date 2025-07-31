@@ -1428,7 +1428,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
   (let ((size (or (gethash img bookiez--image-size-table)
 		  (bookiez--image-size img))))
     (setf (gethash img bookiez--image-size-table) size)
-    (format "width=%spx height=%spx" (car size) (cdr size))))
+    (format "width='%spx' height='%spx'" (car size) (cdr size))))
 
 (defun bookiez--export-html-overview ()
   (bookiez--html "authors" "Authors" "authors"
@@ -1606,7 +1606,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 		    (file-newer-than-file-p file small))
 	    (remhash small bookiez--image-size-table)
 	    (call-process "convert" nil nil nil
-			  "-resize" "x100" file small))
+			  "-strip" "-resize" "x100" file small))
 	  (if return-small small img))))))
 
 (defun bookiez--generate-html-genres ()
