@@ -107,8 +107,12 @@ div.top {
   position: absolute;
   top: 30px;
   right: 30px;
+  font-size: 30px;
 }
 
+td.format, td.status {
+  font-size: 40px;
+}
 
 @view-transition {
   navigation: auto;
@@ -134,11 +138,15 @@ div.top {
 
 
 @media screen and (max-width: 768px) {
-  th.date, td.date, th.author, td.author {
+  th.date, td.date, th.author, td.author, th.count, td.count {
     display: none;
   }
 
   td, th {
     font-size: 20px;
+  }
+
+  table.authors td.covers {
+    text-align: right;
   }
 }

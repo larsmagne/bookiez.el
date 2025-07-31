@@ -698,12 +698,12 @@ for instance, being notified when they publish a new book."
 (defun bookiez-author-search ()
   "Search for books by the author under point."
   (interactive)
-  (bookiez-search-author (nth 0 (vtable-current-object))))
+  (bookiez-search-author (nth 2 (vtable-current-object))))
 
 (defun bookiez-author-search-new-books ()
   "Search for new books by the author under point."
   (interactive)
-  (let ((author (nth 0 (vtable-current-object))))
+  (let ((author (plist-get (vtable-current-object) :author)))
     (bookiez-search-author-new-books
      author
      (cl-loop for book in bookiez-books
@@ -1428,18 +1428,21 @@ It will be written to `bookiez-export-html-directory'.  Also see
 
 (defun bookiez--export-html-overview ()
   (bookiez--html "authors" "Authors" "authors"
-    (insert "<tr><th>Book#<th>Author<th>Covers</tr>")
+    (insert
+     "<tr><th class='count'>Book#<th>Author<th class='covers'>Covers</tr>")
     (cl-loop for elem in (sort
 			  (bookiez--overview-entries
 			   (bookiez--filter-export bookiez-books))
 			  (lambda (e1 e2)
 			    (string< (bookiez--author-sort-key (nth 2 e1))
 				     (bookiez--author-sort-key (nth 2 e2)))))
-	     do (insert (format "<tr><td>%s<td><a href='author-%s.html'>%s</a>"
-				(nth 1 elem)
-				(bookiez--file-name (nth 2 elem))
-				(nth 2 elem)))
-	     (insert "<td>")
+	     do (insert
+		 (format
+		  "<tr><td class='count'>%s<td><a href='author-%s.html'>%s</a>"
+		  (nth 1 elem)
+		  (bookiez--file-name (nth 2 elem))
+		  (nth 2 elem)))
+	     (insert "<td class='covers'>")
 	     (dolist (book (bookiez--author-books (nth 2 elem)))
 	       (when-let ((img (bookiez--html-img-file book t)))
 		 (insert
@@ -1478,7 +1481,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	       (bookiez--img-dimensions (bookiez--html-img-file book t)))))
 	   (insert
 	    (format
-	     "<td>%s<td>%s<td class='date'>%s%s<td class='date'>%s%s<td><a href='%s.html'>%s</a></tr>"
+	     "<td class='format'>%s<td class='status'>%s<td class='date'>%s%s<td class='date'>%s%s<td><a href='%s.html'>%s</a></tr>"
 	     (if (equal (plist-get book :format) "paper")
 		 "<span title='paper'>📖</span>"
 	       "<span title='ebook'>📄</span>")
