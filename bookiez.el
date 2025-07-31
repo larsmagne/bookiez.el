@@ -372,10 +372,10 @@
 	      (lambda (o1 o2)
 		(equal (nth 2 o1) (nth 2 o2))))))))
 
-(defun bookiez--overview-entries ()
+(defun bookiez--overview-entries (&optional books)
   (let ((tracked (multisession-value bookiez-tracked-authors))
 	(authors (make-hash-table :test #'equal)))
-    (dolist (book bookiez-books)
+    (dolist (book (or books bookiez-books))
       (dolist (author (split-string (plist-get book :author) ", "))
 	(cl-incf (gethash author authors 0))))
     (sort
@@ -441,6 +441,16 @@ If given a prefix, don't mark it read on a specific date."
     (bookiez-write-database)
     (vtable-update-object (vtable-current-table) book book)
     (message "Marked %s as unread" (plist-get book :title))))
+
+(defun bookiez-mark-as-hidden ()
+  "Mark the book under point as hidden."
+  (interactive)
+  (let ((book (vtable-current-object)))
+    (unless book
+      (error "No book on the current line"))
+    (bookiez-set book :hidden t)
+    (bookiez-write-database)
+    (message "Marked %s as hidden" (plist-get book :title))))
 
 (defun bookiez-author-delete-book ()
   "Delete the book under point."
@@ -1313,11 +1323,17 @@ for instance, being notified when they publish a new book."
 				 finally (return name)))
 	       " "))
 
+(defun bookiez--filter-export (books)
+  (cl-loop for book in books
+	   unless (plist-get book :hidden)
+	   collect book))
+
 (defun bookiez--export-html-overview ()
   (bookiez--html "authors" "Authors" "authors"
     (insert "<tr><th>Book#<th>Author<th>Covers</tr>")
     (cl-loop for elem in (sort
-			  (bookiez--overview-entries)
+			  (bookiez--overview-entries
+			   (bookiez--filter-export bookiez-books))
 			  (lambda (e1 e2)
 			    (string< (bookiez--author-sort-key (nth 2 e1))
 				     (bookiez--author-sort-key (nth 2 e2)))))
@@ -1338,7 +1354,8 @@ for instance, being notified when they publish a new book."
 
 (defun bookiez--export-html-author (author)
   (bookiez--html "author" author (concat "author-" author)
-    (bookiez--export-html-books (bookiez--author-books author) t)))
+    (bookiez--export-html-books
+     (bookiez--filter-export (bookiez--author-books author)) t)))
 
 (defun bookiez--export-html-books (books &optional inhibit-author)
   (insert "<tr><th>Cover"
@@ -1383,7 +1400,8 @@ for instance, being notified when they publish a new book."
 (defun bookiez--export-html-genre (genre)
   (bookiez--html "genre" (concat "Genre: " genre)
 		 (concat "genre-" genre)
-    (bookiez--export-html-books (bookiez--genre-books genre))))
+    (bookiez--export-html-books
+     (bookiez--filter-export (bookiez--genre-books genre)))))
 
 (defun bookiez--export-html-isbns ()
   (cl-loop
