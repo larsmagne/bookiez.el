@@ -189,11 +189,15 @@
 (defun bookiez-query-jacket ()
   "Re-download the book jacket."
   (interactive nil bookiez-book-mode)
+  (unless (isbn-valid-p bookiez-book-isbn)
+    (user-error "Invalid ISBN %s; can't look up" bookiez-book-isbn))
   (let ((book (bookiez-lookup bookiez-book-isbn)))
     (cl-loop for isbn in (cons bookiez-book-isbn
 			       ;; There may be other ISBNs for
 			       ;; this book where there is a cover.
-			       (isbn-isbns-librarything bookiez-book-isbn))
+			       (delete
+				bookiez-book-isbn
+				(isbn-isbns-librarything bookiez-book-isbn)))
 	     while
 	     (not
 	      (cl-loop
