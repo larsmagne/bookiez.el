@@ -1285,23 +1285,37 @@ for instance, being notified when they publish a new book."
      (let ((title ,title)
 	   (class ,class)
 	   (file-name ,file-name))
-       (insert (format "<head><title>%s</title><meta charset='utf-8'>"
-		       (capitalize title)))
+       (insert (format "<head><title>%s</title><meta charset='utf-8'>" title))
+       (insert "<link href='bookiez.css' rel='stylesheet' type='text/css'>")
+       (insert (format "<body class='%s'>" class))
+       (insert "<h1 class='title'>" title "</h1>")
        (insert (format "<table class='%s'>" class))
        ,@body
        (insert "</table>")
        (insert (format
-		"<span class='credits'>Sent from my <a href='https://github.com/larsmagne/bookiez.el'>bookiez</a>"))
+		"<div class='credits'>Sent from my <a href='https://github.com/larsmagne/bookiez.el'>bookiez</a>."))
        (write-region
 	(point-min) (point-max)
 	(expand-file-name (format "%s.html" (bookiez--file-name file-name))
 			  bookiez-export-html-directory)
 	nil 'silent))))
-  
+
+(defun bookiez--author-sort-key (author)
+  (string-join (reverse (cl-loop with name = (split-string author)
+				 for elem in '("Jr." "(Editor)" "(editor)")
+				 do (setq name (delete elem name))
+				 finally (return name)))
+	       " "))
+
 (defun bookiez--export-html-overview ()
-  (bookiez--html "overview" "overview" "authors"
-    (cl-loop for elem in (bookiez--overview-entries)
-	     do (insert (format "<tr><td>%s<td><a href='author-%s'>%s</a><td>"
+  (bookiez--html "authors" "Authors" "authors"
+    (insert "<tr><th>Book#<th>Author</tr>")
+    (cl-loop for elem in (sort
+			  (bookiez--overview-entries)
+			  (lambda (e1 e2)
+			    (string< (bookiez--author-sort-key (nth 2 e1))
+				     (bookiez--author-sort-key (nth 2 e2)))))
+	     do (insert (format "<tr><td>%s<td><a href='author-%s.html'>%s</a>"
 				(nth 1 elem)
 				(bookiez--file-name (nth 2 elem))
 				(nth 2 elem)))
@@ -1312,13 +1326,14 @@ for instance, being notified when they publish a new book."
 
 (defun bookiez--export-html-author (author)
   (bookiez--html "author" author (concat "author-" author)
-    (bookiez--export-html-books (bookiez--author-books author))))
+    (bookiez--export-html-books (bookiez--author-books author) t)))
 
-(defun bookiez--export-html-books (books)
+(defun bookiez--export-html-books (books &optional inhibit-author)
+  (insert "<tr><th>Format<th>Status<th>Published<th>Read<th>Title</tr>")
   (cl-loop for book in books
 	   do (insert
 	       (format
-		"<tr><td>%s<td>%s<td>%s<td>%s<td><a href='author-%s.html'>%s</a><td><a href='book-%s.html'>%s</a></tr>"
+		"<tr><td>%s<td>%s<td>%s<td>%s%s<td><a href='%s.html'>%s</a></tr>"
 		(if (equal (plist-get book :format) "paper")
 		    "<span title='paper'>📘</span>"
 		  "<span title='ebook'>📄</span>")
@@ -1331,13 +1346,19 @@ for instance, being notified when they publish a new book."
 		  "<span title='wishlist'>🎇</span>")
 		 (t
 		  "<span title='read'>✔️</span>"))
-		(plist-get book :published-date)
-		(or (elt (plist-get book :read-dates) 0) "")
-		(concat "author-" (bookiez--file-name (plist-get book :author))
-			".html")
-		(plist-get book :author)
-		(concat "isbn-" (bookiez--file-name (plist-get book :isbn))
-			".html")
+		(bookiez--format-date (plist-get book :published-date))
+		(if (cl-plusp (length (plist-get book :read-dates)))
+		    (bookiez--format-date (elt (plist-get book :read-dates) 0))
+		  "")
+		(if inhibit-author
+		    ""
+		  (format
+		   "<td><a href='author-%s.html'>%s</a>"
+		   (concat "author-"
+			   (bookiez--file-name (plist-get book :author))
+			   ".html")
+		   (plist-get book :author)))
+		(concat "isbn-" (bookiez--file-name (plist-get book :isbn)))
 		(plist-get book :title)))))
 
 (defun bookiez--export-html-genre (genre)
@@ -1351,7 +1372,7 @@ for instance, being notified when they publish a new book."
    do (bookiez--html "book" (plist-get book :title)
 		     (concat "isbn-" (plist-get book :isbn))
 	(insert
-	 (format "<div class='author'><a href='author-%s'>%s</a></div>"
+	 (format "<div class='author'><a href='author-%s.html'>%s</a></div>"
 		 (bookiez--file-name (plist-get book :author))
 		 (plist-get book :author)))
 	(insert "<div class='title'>" (plist-get book :title) "</div>")
@@ -1400,6 +1421,13 @@ for instance, being notified when they publish a new book."
 		(copy-file file img))
 	      (insert "<div class='cover-image'><img src='"
 		      (file-name-nondirectory img)
-		      "'></div>")))))))
+		      "'></div>"))))
+	(when (isbn-valid-p (plist-get book :isbn))
+	  (insert "<div class='links'>")
+	  (insert (format "<span class='goodreads'><a href='https://www.goodreads.com/search?q=%s'>Goodreads</a></span>, "
+			  (plist-get book :isbn)))
+	  (insert (format "<span class='goodreads'><a href='https://www.biblio.com/%s'>Biblio</a></span>"
+			  (plist-get book :isbn)))
+	  (insert "</div>")))))
 
 (provide 'bookiez)
