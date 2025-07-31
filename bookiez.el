@@ -1292,7 +1292,7 @@ for instance, being notified when they publish a new book."
   "Export the database to HTML.
 It will be written to `bookiez-export-html-directory'."
   (interactive)
-  (let ((dir boozies-export-html-directory))
+  (let ((dir bookiez-export-html-directory))
     (message "Exporting...")
     (unless (file-exists-p dir)
       (make-directory dir))
