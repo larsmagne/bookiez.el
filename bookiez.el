@@ -1276,6 +1276,10 @@ for instance, being notified when they publish a new book."
   (let ((dir boozies-export-html-directory))
     (unless (file-exists-p dir)
       (make-directory dir))
+    (copy-file (concat (file-name-directory (find-library-name "bookiez.el"))
+		       "assets/bookiez.css")
+	       (expand-file-name "bookiez.css" dir)
+	       t)
     (bookiez--export-html-overview)
     (bookiez--export-html-isbns)))
 
