@@ -189,10 +189,37 @@
 (defun bookiez-query-jacket ()
   "Re-download the book jacket."
   (interactive nil bookiez-book-mode)
-  (bookiez-cache-image bookiez-book-isbn
-		       (plist-get (bookiez-lookup bookiez-book-isbn) :cover-url)
-		       t)
-  (clear-image-cache))
+  (let ((book (bookiez-lookup bookiez-book-isbn)))
+    (cl-loop for isbn in (cons bookiez-book-isbn
+			       (isbn-isbns-librarything bookiez-book-isbn))
+	     while
+	     (not
+	      (cl-loop
+	       for cover in (isbn-covers isbn)
+	       when
+	       (y-or-n-p
+		(format
+		 "Use this: %s"
+		 (with-current-buffer (url-retrieve-synchronously cover)
+		   (goto-char (point-min))
+		   (and (search-forward "\n\n" nil t)
+			(propertize
+			 " "
+			 'display (create-image
+				   (buffer-substring (point) (point-max))
+				   nil t
+				   :max-height 400
+				   :max-width 400))))))
+	       return
+	       (progn
+		 (bookiez-set book :cover-url cover)
+		 t))))
+    (bookiez-write-database)
+    (if (cl-plusp (length (plist-get book :cover-url)))
+	(bookiez-cache-image bookiez-book-isbn (plist-get book :cover-url) t)
+      (message "Unable to find cover image for %s" bookiez-book-isbn))
+    (clear-image-cache)
+    (bookiez-display-isbn-1 bookiez-book-isbn)))
 
 (defun bookiez-book-edit ()
   "Edit the book data in the current buffer."
@@ -1537,14 +1564,18 @@ It will be written to `bookiez-export-html-directory'.  Also see
 			  (bookiez--file-name (plist-get book :isbn))
 			  "." (file-name-extension file))
 		  bookiez-export-html-directory)))
-	(unless (file-exists-p img)
+	(when (or (not (file-exists-p img))
+		  (file-newer-than-file-p file img))
+	  (remhash img bookiez--image-size-table)
 	  (copy-file file img))
 	(let ((small (expand-file-name
 		      (concat "small-isbn-"
 			      (bookiez--file-name (plist-get book :isbn))
 			      ".jpg")
 		      bookiez-export-html-directory)))
-	  (unless (file-exists-p small)
+	  (when (or (not (file-exists-p small))
+		    (file-newer-than-file-p file small))
+	    (remhash small bookiez--image-size-table)
 	    (call-process "convert" nil nil nil
 			  "-resize" "x100" file small))
 	  (if return-small small img))))))
