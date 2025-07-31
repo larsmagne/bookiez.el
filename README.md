@@ -75,7 +75,9 @@ The data is written in a JSON format to `bookiez-data-file'.
 
 You can export the data to HTML (suitable for putting on a web site to
 look at your books while on the go) by using the `M-x
-bookiez-export-html' command.
+bookiez-export-html' command.  Afterwards, just put the resulting
+files in a directory on a web server.  The top-level HTML file will be
+called "authors.html".
 
 Barcode Scanners
 ================
