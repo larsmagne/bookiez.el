@@ -1288,8 +1288,12 @@ for instance, being notified when they publish a new book."
 (defvar bookiez-export-html-directory "/var/tmp/bookiez-html/"
   "The directory where HTML exports will be written to.")
 
-(defun bookiez--export-html ()
+(defun bookiez-export-html ()
+  "Export the database to HTML.
+It will be written to `bookiez-export-html-directory'."
+  (interactive)
   (let ((dir boozies-export-html-directory))
+    (message "Exporting...")
     (unless (file-exists-p dir)
       (make-directory dir))
     (copy-file (concat (file-name-directory (find-library-name "bookiez.el"))
@@ -1298,7 +1302,8 @@ for instance, being notified when they publish a new book."
 	       t)
     (bookiez--generate-html-genres)
     (bookiez--export-html-overview)
-    (bookiez--export-html-isbns)))
+    (bookiez--export-html-isbns)
+    (message "Exporting...done to %s" bookiez-export-html-directory)))
 
 (defmacro bookiez--html (class title file-name &rest body)
   (declare (debug t) (indent 3))
