@@ -735,17 +735,17 @@ for instance, being notified when they publish a new book."
   (pcase (vtable-column table column)
     ("Format"
      (if (equal (plist-get book :format) "paper")
-	 "📘"
+	 "📖"
        "📄"))
     ("Status"
      (cond ((equal (plist-get book :status) "unread")
-	    "🟣")
+	    "📕")
 	   ((equal (plist-get book :status) "skipped")
 	    "❌")
 	   ((equal (plist-get book :status) "wishlist")
 	    "🎇")
 	   (t
-	    "✔️")))
+	    "📗")))
     ("Published"
      (plist-get book :published-date))
     ("Bought"
@@ -1393,17 +1393,17 @@ It will be written to `bookiez-export-html-directory'."
 	    (format
 	     "<td>%s<td>%s<td class='date'>%s%s<td class='date'>%s%s<td><a href='%s.html'>%s</a></tr>"
 	     (if (equal (plist-get book :format) "paper")
-		 "<span title='paper'>📘</span>"
+		 "<span title='paper'>📖</span>"
 	       "<span title='ebook'>📄</span>")
 	     (cond
 	      ((equal (plist-get book :status) "unread")
-	       "<span title='unread'>🟣</span>")
+	       "<span title='unread'>📕</span>")
 	      ((equal (plist-get book :status) "skipped")
 	       "<span title='skipped'>❌</span>")
 	      ((equal (plist-get book :status) "wishlist")
 	       "<span title='wishlist'>🎇</span>")
 	      (t
-	       "<span title='read'>✔️</span>"))
+	       "<span title='read'>📗</span>"))
 	     (if (equal (plist-get book :published-date) "1970-01-01")
 		 ""
 	       (bookiez--format-date (plist-get book :published-date)))
