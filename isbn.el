@@ -93,7 +93,7 @@ If ALL-RESULTS, return the results from all providors."
   "Return cover URLs for ISBN."
   (cl-loop for result in (isbn-lookup isbn t)
 	   for cover = (nth 3 result)
-	   when cover
+	   when (cl-plusp (length cover))
 	   collect cover))
 
 (defun isbn-first-result (result)
