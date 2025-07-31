@@ -846,10 +846,14 @@ for instance, being notified when they publish a new book."
 			    :cover-url :format)
 	     do (bookiez-set
 		 book slot
-		 (read-string
-		  (format "%s: "
-			  (capitalize (substring  (symbol-name slot) 1)))
-		  (plist-get book slot))))
+		 (let ((string
+			(read-string
+			 (format "%s: "
+				 (capitalize (substring  (symbol-name slot) 1)))
+			 (plist-get book slot))))
+		   (if (zerop (length string))
+		       nil
+		     string))))
     (when-let ((urls (isbn-covers (plist-get book :isbn))))
       (bookiez-set book :cover-url (car urls))
       (bookiez-cache-image (plist-get book :isbn) (car urls)))
