@@ -106,8 +106,8 @@
   "&" #'bookiez-book-goodreads
   "l" #'bookiez
   "q" #'bury-buffer
-  "j" #'bookiez-change-jacket
-  "J" #'bookiez-query-jacket
+  "J" #'bookiez-change-jacket
+  "j" #'bookiez-query-jacket
   "c" #'bookiez-book-edit)
 
 (defvar bookiez-book-isbn nil)
@@ -624,7 +624,21 @@ for instance, being notified when they publish a new book."
   "n" #'bookiez-author-search-new-books
   "m" #'bookiez-author-search-missing-books
   "q" #'bury-buffer
-  "e" #'bookiez-add-ebook-manually)
+  "e" #'bookiez-add-ebook-manually
+  "z" #'bookiez-next-list)
+
+(defun bookiez-next-list ()
+  "Choose the next author from the *Bookiez* buffer."
+  (interactive)
+  (unless (get-buffer "*Bookiez*")
+    (user-error "No *Bookiez* buffer exists"))
+  (let ((current (current-buffer))
+	author)
+    (set-buffer (get-buffer "*Bookiez*"))
+    (forward-line 1)
+    (setq author (nth 2 (vtable-current-object)))
+    (set-buffer current)
+    (bookiez-show-author author)))
 
 (defun bookiez-isbn-number ()
   "Add ISBN from the numbers entered."
