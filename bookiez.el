@@ -1358,6 +1358,25 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	   unless (plist-get book :hidden)
 	   collect book))
 
+(defun bookiez--image-size (file)
+  (let ((size (mapcar
+	       #'string-to-number
+	       (split-string
+		(with-temp-buffer
+		  (set-buffer-multibyte nil)
+		  (call-process "identify" nil t nil "-format" "%w %h"
+				(expand-file-name file))
+		  (buffer-string))))))
+    (cons (car size) (cadr size))))
+
+(defvar bookiez--image-size-table (make-hash-table :test #'equal))
+
+(defun bookiez--img-dimensions (img)
+  (let ((size (or (gethash img bookiez--image-size-table)
+		  (bookiez--image-size img))))
+    (setf (gethash img bookiez--image-size-table) size)
+    (format "width=%spx height=%spx" (car size) (cdr size))))
+
 (defun bookiez--export-html-overview ()
   (bookiez--html "authors" "Authors" "authors"
     (insert "<tr><th>Book#<th>Author<th>Covers</tr>")
@@ -1374,9 +1393,12 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	     (insert "<td>")
 	     (dolist (book (bookiez--author-books (nth 2 elem)))
 	       (when-let ((img (bookiez--html-img-file book t)))
-		 (insert (format "<a href='isbn-%s.html'><img class='cover' src='%s'></a>"
-				 (bookiez--file-name (plist-get book :isbn))
-				 (file-name-nondirectory img)))))
+		 (insert
+		  (format
+		   "<a href='isbn-%s.html'><img class='cover' src='%s' %s></a>"
+		   (bookiez--file-name (plist-get book :isbn))
+		   (file-name-nondirectory img)
+		   (bookiez--image-dimensions img)))))
 	     (bookiez--export-html-author (nth 2 elem)))))
 
 (defun bookiez--file-name (name)
@@ -1399,10 +1421,12 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	   (insert "<tr><td>")
 	   (when (file-exists-p (bookiez--cache-file (plist-get book :isbn)))
 	     (insert
-	      (format "<a href='isbn-%s.html'><img class='cover' src='%s'></a>"
-		      (bookiez--file-name (plist-get book :isbn))
-		      (file-name-nondirectory
-		       (bookiez--html-img-file book t)))))
+	      (format
+	       "<a href='isbn-%s.html'><img class='cover' src='%s' %s></a>"
+	       (bookiez--file-name (plist-get book :isbn))
+	       (file-name-nondirectory
+		(bookiez--html-img-file book t))
+	       (bookiez--img-dimensions (bookiez--html-img-file book t)))))
 	   (insert
 	    (format
 	     "<td>%s<td>%s<td class='date'>%s%s<td class='date'>%s%s<td><a href='%s.html'>%s</a></tr>"
