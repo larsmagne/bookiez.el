@@ -1,0 +1,76 @@
+body {
+  background: white;
+  font-family: 'Roboto', sans-serif;
+  border: 10px solid black;
+  margin: 0px;
+  padding: 20px;
+  height: 100%;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+a {
+  text-decoration: none;
+  color: #3030f0;
+}
+
+table td, table th {
+  padding: 3px;
+  text-align: left;
+}
+
+table tr:nth-child(odd) {
+  background-color: #e0e0e0;
+}
+
+table th {
+  background-color: #c0c0c0;
+}
+
+table.authors {
+  
+}
+
+table.authors td:nth-of-type(1), table.authors th:nth-of-type(1) {
+  text-align: right;
+}
+
+div.credits {
+  padding-top: 20px;
+  font-style: italic;
+}
+
+div.cover-image {
+  padding-top: 20px;
+}
+
+div.cover-image img {
+  max-height: 50%;
+  max-width: 50%;
+}
+
+body.book div {
+}
+
+div.status, div.genres {
+  padding-top: 20px;
+}
+
+body.book span {
+  font-weight: bold;
+}
+
+div.author, div.title {
+  font-weight: bold;
+}
+
+div.links {
+  padding-top: 20px;
+}
+
+div.links > span {
+  font-weight: normal;
+}
