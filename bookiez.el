@@ -1313,6 +1313,7 @@ It will be written to `bookiez-export-html-directory'."
 	   (file-name ,file-name))
        (insert (format "<head><title>%s</title><meta charset='utf-8'>" title))
        (insert "<link href='bookiez.css' rel='stylesheet' type='text/css'>")
+       (insert "<meta name='viewport' content='width=device-width, initial-scale=1.0'>")
        (insert (format "<body class='%s'>" class))
        (insert "<div class='top'><a href='authors.html'>💠</a></div>")
        (insert "<h1 class='title'>" title "</h1>")
@@ -1376,10 +1377,10 @@ It will be written to `bookiez-export-html-directory'."
 
 (defun bookiez--export-html-books (books &optional inhibit-author)
   (insert "<tr><th>Cover"
-	  "<th>Format<th>Status<th>Published"
-	  (if inhibit-author "<th>Bought" "")
-	  "<th>Read"
-	  (if inhibit-author "" "<th>Author")
+	  "<th>Format<th>Status<th class='date'>Published"
+	  (if inhibit-author "<th class='date'>Bought" "")
+	  "<th class='date'>Read"
+	  (if inhibit-author "" "<th class='author'>Author")
 	  "<th>Title</tr>")
   (cl-loop for book in books
 	   do
@@ -1419,7 +1420,7 @@ It will be written to `bookiez-export-html-directory'."
 	     (if inhibit-author
 		 ""
 	       (format
-		"<td><a href='author-%s.html'>%s</a>"
+		"<td class='author'><a href='author-%s.html'>%s</a>"
 		(concat (bookiez--file-name (plist-get book :author)))
 		(plist-get book :author)))
 	     (concat "isbn-" (bookiez--file-name (plist-get book :isbn)))

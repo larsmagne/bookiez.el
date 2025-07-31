@@ -27,6 +27,10 @@ table tr:nth-child(odd) {
   background-color: #e0e0e0;
 }
 
+table tr:nth-child(even) {
+  background-color: white;
+}
+
 table th {
   background-color: #c0c0c0;
 }
@@ -126,4 +130,15 @@ div.top {
 @keyframes fade-out {
   from { opacity: 1; }
   to { opacity: 0; }
+}
+
+
+@media screen and (max-width: 768px) {
+  th.date, td.date, th.author, td.author {
+    display: none;
+  }
+
+  td, th {
+    font-size: 20px;
+  }
 }
