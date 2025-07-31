@@ -1315,7 +1315,7 @@ It will be written to `bookiez-export-html-directory'."
        (insert "<link href='bookiez.css' rel='stylesheet' type='text/css'>")
        (insert "<meta name='viewport' content='width=device-width, initial-scale=1.0'>")
        (insert (format "<body class='%s'>" class))
-       (insert "<div class='top'><a href='authors.html'>💠</a></div>")
+       (insert "<div class='top'><a href='authors.html'>📚</a></div>")
        (insert "<h1 class='title'>" title "</h1>")
        (insert (format "<table class='%s'>" class))
        ,@body
@@ -1386,9 +1386,11 @@ It will be written to `bookiez-export-html-directory'."
 	   do
 	   (insert "<tr><td>")
 	   (when (file-exists-p (bookiez--cache-file (plist-get book :isbn)))
-	     (insert (format "<img class='cover' src='%s'>"
-			     (file-name-nondirectory
-			      (bookiez--html-img-file book t)))))
+	     (insert
+	      (format "<a href='isbn-%s.html'><img class='cover' src='%s'></a>"
+		      (bookiez--file-name (plist-get book :isbn))
+		      (file-name-nondirectory
+		       (bookiez--html-img-file book t)))))
 	   (insert
 	    (format
 	     "<td>%s<td>%s<td class='date'>%s%s<td class='date'>%s%s<td><a href='%s.html'>%s</a></tr>"
