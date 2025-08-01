@@ -1475,6 +1475,19 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (setf (gethash img bookiez--image-size-table) size)
     (format "width='%spx' height='%spx'" (car size) (cdr size))))
 
+(defvar bookiez--random (make-hash-table))
+
+;; A version of `random' that avoids similar subsequent results.
+(defun bookiez--random (max wiggle type)
+  (let ((result
+	 (cl-loop for num = (random max)
+		  for prev = (gethash type bookiez--random)
+		  when (or (not prev)
+			   (> (abs (- num prev)) wiggle))
+		  return num)))
+    (setf (gethash type bookiez--random) result)
+    result))
+
 (defun bookiez--export-html-overview ()
   (bookiez--html "authors" "Authors" "authors"
     (insert
@@ -1494,7 +1507,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	     (insert
 	      (format
 	       "<td class='covers' style='background: url(shelf.png) %spx;'>"
-	       (random 780)))
+	       (bookiez--random 780 100 :shift)))
 	     (let ((covers
 		    (cl-loop for book in (bookiez--author-books (nth 2 elem))
 			     for img = (bookiez--html-img-file book t)
@@ -1511,7 +1524,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 		((> (length covers) 6)
 		 (mapc #'insert covers))
 		(t
-		 (let ((before (random 6)))
+		 (let ((before (bookiez--random 6 0 :space)))
 		   (cl-loop for i from 0 upto before
 			    do (insert
 				(format
