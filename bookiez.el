@@ -518,6 +518,20 @@ If given a prefix, don't mark it read on a specific date."
     (bookiez-write-database)
     (message "Marked %s as hidden" (plist-get book :title))))
 
+(defun bookiez-delete-cover ()
+  "Delete the cover of the book under point."
+  (interactive)
+  (let ((book (vtable-current-object)))
+    (unless book
+      (error "No book on the current line"))
+    (let ((file (bookiez--cache-file (plist-get book :isbn))))
+      (when (file-exists-p file)
+	(delete-file file))
+      (bookiez-set book :cover-url nil)
+      (bookiez-write-database)
+      (vtable-update-object (vtable-current-table) book book)
+      (message "Deleted the %s cover" (plist-get book :title)))))
+
 (defun bookiez-author-delete-book ()
   "Delete the book under point."
   (interactive)
