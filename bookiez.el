@@ -1600,9 +1600,14 @@ It will be written to `bookiez-export-html-directory'.  Also see
    do (bookiez--html "book" (plist-get book :title)
 		     (concat "isbn-" (plist-get book :isbn))
 	(insert
-	 (format "<div class='author'><a href='author-%s.html'>%s</a></div>"
-		 (bookiez--file-name (plist-get book :author))
-		 (plist-get book :author)))
+	 "<div class='author'>"
+	 (mapconcat
+	  (lambda (author)
+	    (format "<a href='author-%s.html'>%s</a>"
+		    (bookiez--file-name author) author))
+	  (split-string (plist-get book :author) ", ")
+	  ", ")
+	 "</div>")
 	(insert "<div class='title'>" (plist-get book :title) "</div>")
 		
 	(insert "<div class='status'>Status <span class='status'>"
