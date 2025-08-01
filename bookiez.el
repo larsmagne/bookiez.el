@@ -775,10 +775,13 @@ for instance, being notified when they publish a new book."
      :keymap bookiez-list-mode-map)))
 
 (defun bookiez--format-date (date)
-  (string-clean-whitespace
-   (format-time-string
-    "%b %e, %Y"
-    (encode-time (decoded-time-set-defaults (iso8601-parse-date date))))))
+  (if (and (length= date 10)
+	   (equal (subseq date 4) "-01-01"))
+      (subseq date 0 4)
+    (string-clean-whitespace
+     (format-time-string
+      "%b %e, %Y"
+      (encode-time (decoded-time-set-defaults (iso8601-parse-date date)))))))
 	
 (defun bookiez--formatter (value column table)
   (propertize
@@ -1470,14 +1473,18 @@ It will be written to `bookiez-export-html-directory'.  Also see
 		  (bookiez--file-name (nth 2 elem))
 		  (nth 2 elem)))
 	     (insert "<td class='covers'>")
-	     (dolist (book (bookiez--author-books (nth 2 elem)))
-	       (when-let ((img (bookiez--html-img-file book t)))
-		 (insert
-		  (format
-		   "<a href='isbn-%s.html'><img loading='lazy' class='cover' src='%s' %s></a>"
-		   (bookiez--file-name (plist-get book :isbn))
-		   (file-name-nondirectory img)
-		   (bookiez--image-dimensions img)))))
+	     (let ((did nil))
+	       (dolist (book (bookiez--author-books (nth 2 elem)))
+		 (when-let ((img (bookiez--html-img-file book t)))
+		   (setq did t)
+		   (insert
+		    (format
+		     "<a href='isbn-%s.html'><img loading='lazy' class='cover' src='%s' %s></a>"
+		     (bookiez--file-name (plist-get book :isbn))
+		     (file-name-nondirectory img)
+		     (bookiez--image-dimensions img)))))
+	       (unless did
+		 (insert "<div class='no-image'>&nbsp;</div>")))
 	     (bookiez--export-html-author (nth 2 elem)))))
 
 (defun bookiez--file-name (name)
@@ -1498,7 +1505,9 @@ It will be written to `bookiez-export-html-directory'.  Also see
   (cl-loop for book in books
 	   do
 	   (insert "<tr><td>")
-	   (when (file-exists-p (bookiez--cache-file (plist-get book :isbn)))
+	   (if (not (file-exists-p
+		     (bookiez--cache-file (plist-get book :isbn))))
+	       (insert "<div class='no-image'>&nbsp;</div>")
 	     (insert
 	      (format
 	       "<a href='isbn-%s.html'><img class='cover' src='%s' %s></a>"
