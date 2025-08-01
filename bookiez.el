@@ -445,14 +445,19 @@
       (dolist (author (split-string (plist-get book :author) ", "))
 	(cl-incf (gethash author authors 0))))
     (sort
-     (let ((res nil))
-       (maphash (lambda (k v)
-		  (push (list (member k tracked) v k)
-			res))
-		authors)
-       res)
-     (lambda (a1 a2)
-       (string< (caddr a1) (caddr a2))))))
+     (sort
+      (let ((res nil))
+	(maphash (lambda (k v)
+		   (push (list (member k tracked) v k)
+			 res))
+		 authors)
+	res)
+      (lambda (a1 a2)
+	(string< (caddr a1) (caddr a2))))
+    
+     (lambda (e1 e2)
+       (string< (bookiez--author-sort-key (nth 2 e1))
+		(bookiez--author-sort-key (nth 2 e2)))))))
 
 (defun bookiez-mark-as-skipped ()
   "Mark the book under point as skipped."
@@ -1492,12 +1497,8 @@ It will be written to `bookiez-export-html-directory'.  Also see
   (bookiez--html "authors" "Authors" "authors"
     (insert
      "<tr><th class='count'>Books<th class='author'>Author<th class='covers'>Covers</tr>")
-    (cl-loop for elem in (sort
-			  (bookiez--overview-entries
-			   (bookiez--filter-export bookiez-books))
-			  (lambda (e1 e2)
-			    (string< (bookiez--author-sort-key (nth 2 e1))
-				     (bookiez--author-sort-key (nth 2 e2)))))
+    (cl-loop for elem in (bookiez--overview-entries
+			  (bookiez--filter-export bookiez-books))
 	     do (insert
 		 (format
 		  "<tr><td class='count'>%s<td class='author'><a href='author-%s.html'>%s</a>"
