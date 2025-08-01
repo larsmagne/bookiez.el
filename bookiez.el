@@ -613,6 +613,8 @@ for instance, being notified when they publish a new book."
 		(bookiez-set book :author (string-join new-list ", "))))
   (bookiez-write-database)
   (forward-line 1)
+  (when (eobp)
+    (forward-line -2))
   (vtable-revert-command))
 
 (defun bookiez-add-isbn (isbn)
@@ -834,7 +836,7 @@ for instance, being notified when they publish a new book."
      (let ((file (bookiez--cache-file (plist-get book :isbn))))
        (propertize "*" 'display 
 		   (if (file-exists-p file)
-		       (create-image file nil nil :height 100 :max-width 100)
+		       (create-image file nil nil :height 150 :max-width 150)
 		     (let ((svg (svg-create 60 100)))
 		       (svg-rectangle svg 0 0 60 100 :fill "#202020")
 		       (svg-image svg))))))))
@@ -1496,13 +1498,17 @@ It will be written to `bookiez-export-html-directory'.  Also see
 		 (mapc #'insert covers))
 		(t
 		 (let ((before (random 6)))
-		   (cl-loop repeat before
+		   (cl-loop for i from 0 upto before
 			    do (insert
-				"<span class='space-image'></span>"))
+				(format
+				 "<span class='space-image space-image-%d'></span>"
+				 i)))
 		   (mapc #'insert covers)
-		   (cl-loop repeat (- 6 before)
+		   (cl-loop for i from before upto (- 6 before)
 			    do (insert
-				"<span class='space-image'></span>"))))))
+				(format
+				 "<span class='space-image space-image-%d'></span>"
+				 i)))))))
 	     (bookiez--export-html-author (nth 2 elem)))))
 
 (defun bookiez--file-name (name)
@@ -1661,7 +1667,8 @@ It will be written to `bookiez-export-html-directory'.  Also see
   (dolist (genre (mapcar (lambda (elem) (plist-get elem :genre))
 			 (bookiez--genres)))
     (bookiez--html "genre" genre (concat "genre-" genre)
-      (bookiez--export-html-books (bookiez--genre-books genre)))))
+      (bookiez--export-html-books
+       (bookiez--filter-export (bookiez--genre-books genre))))))
 
 (defun bookiez--clear-bought-date (date)
   (dolist (book bookiez-books)
@@ -1673,9 +1680,9 @@ It will be written to `bookiez-export-html-directory'.  Also see
   (let ((table (make-hash-table :test #'equal)))
     (dolist (book bookiez-books)
       (when (gethash (plist-get book :isbn) table)
-	(message "Duplicate %s %s %s" (plist-get book :author)
-		 (plist-get book :title)
-		 (plist-get book :isbn)))
+	(error "Duplicate %s %s %s" (plist-get book :author)
+	       (plist-get book :title)
+	       (plist-get book :isbn)))
       (setf (gethash (plist-get book :isbn) table) t))))
 
 (provide 'bookiez)
