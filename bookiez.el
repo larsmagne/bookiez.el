@@ -1677,16 +1677,17 @@ It will be written to `bookiez-export-html-directory'.  Also see
       (let ((img (expand-file-name
 		  (concat "isbn-"
 			  (bookiez--file-name (plist-get book :isbn))
-			  "." (file-name-extension file))
+			  ".webp")
 		  bookiez-export-html-directory)))
 	(when (or (not (file-exists-p img))
 		  (file-newer-than-file-p file img))
 	  (remhash img bookiez--image-size-table)
-	  (copy-file file img t))
+	  (call-process "convert" nil nil nil
+			"-strip" file img))
 	(let ((small (expand-file-name
 		      (concat "small-isbn-"
 			      (bookiez--file-name (plist-get book :isbn))
-			      ".jpg")
+			      ".webp")
 		      bookiez-export-html-directory)))
 	  (when (or (not (file-exists-p small))
 		    (file-newer-than-file-p file small))

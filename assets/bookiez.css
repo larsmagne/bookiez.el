@@ -171,4 +171,14 @@ td.format, td.status {
   td, th {
     font-size: 20px;
   }
+
+  span.space-image-2, span.space-image-3,
+  span.space-image-4, span.space-image-4 {
+    display: none;
+  }
+
+  body {
+    padding: 2px;
+    border: 0px;
+  }
 }
