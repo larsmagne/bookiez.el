@@ -454,7 +454,6 @@
 	res)
       (lambda (a1 a2)
 	(string< (caddr a1) (caddr a2))))
-    
      (lambda (e1 e2)
        (string< (bookiez--author-sort-key (nth 2 e1))
 		(bookiez--author-sort-key (nth 2 e2)))))))
