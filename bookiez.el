@@ -160,10 +160,8 @@
 	(insert "Status " (plist-get book :status) "\n")
 	(unless (equal (plist-get book :format) "paper")
 	  (insert "Format " (plist-get book :format) "\n"))
-	;; Don't output this placeholder date.
-	(unless (equal (plist-get book :published-date) "1970-01-01")
-	  (insert "Published "
-		  (bookiez--format-date (plist-get book :published-date)) "\n"))
+	(insert "Published "
+		(bookiez--format-date (plist-get book :published-date) t) "\n")
 	(when (plist-get book :bought-date)
 	  (insert "Bought "
 		  (bookiez--format-date (plist-get book :bought-date)) "\n"))
@@ -774,10 +772,13 @@ for instance, being notified when they publish a new book."
      :formatter #'bookiez--formatter
      :keymap bookiez-list-mode-map)))
 
-(defun bookiez--format-date (date)
-  (if (and (length= date 10)
-	   (equal (subseq date 4) "-01-01"))
-      (subseq date 0 4)
+(defun bookiez--format-date (date &optional shorten)
+  ;; If a book is registered on Jan 1, it usually means we don't
+  ;; actually have the date.
+  (if (and shorten
+	   (length= date 10)
+	   (equal (substring date 4) "-01-01"))
+      (substring date 0 4)
     (string-clean-whitespace
      (format-time-string
       "%b %e, %Y"
@@ -791,9 +792,7 @@ for instance, being notified when they publish a new book."
 	  ""
 	(bookiez--format-date value)))
      ("Published"
-       (if (equal value "1970-01-01")
-	   ""
-	 (substring value 0 4)))
+      (substring value 0 4))
      ("Bought"
       (cond
        ((null value)
@@ -1530,9 +1529,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	       "<span title='wishlist'>🎇</span>")
 	      (t
 	       "<span title='read'>📗</span>"))
-	     (if (equal (plist-get book :published-date) "1970-01-01")
-		 ""
-	       (bookiez--format-date (plist-get book :published-date)))
+	     (bookiez--format-date (plist-get book :published-date) t)
 	     (if (not inhibit-author)
 		 ""
 	       (concat
@@ -1577,7 +1574,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	;; Don't output this placeholder date.
 	(unless (equal (plist-get book :published-date) "1970-01-01")
 	  (insert "<div class='published'>Published <span class='date'>"
-		  (bookiez--format-date (plist-get book :published-date))
+		  (bookiez--format-date (plist-get book :published-date) t)
 		  "</span></div>"))
 	(when (cl-plusp (length (plist-get book :bought-date)))
 	  (insert "<div class='bought'>Bought <span class='date'>"
