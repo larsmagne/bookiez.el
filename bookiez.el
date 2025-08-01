@@ -1385,7 +1385,11 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (copy-file (concat (file-name-directory (find-library-name "bookiez.el"))
 		       "assets/bookiez.css")
 	       (expand-file-name "bookiez.css" dir)
-	       t)
+	       t t)
+    (copy-file (concat (file-name-directory (find-library-name "bookiez.el"))
+		       "assets/shelf.png")
+	       (expand-file-name "shelf.png" dir)
+	       t t)
     (bookiez--generate-html-genres)
     (bookiez--export-html-overview)
     (bookiez--export-html-isbns)
@@ -1458,7 +1462,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 (defun bookiez--export-html-overview ()
   (bookiez--html "authors" "Authors" "authors"
     (insert
-     "<tr><th class='count'>Books<th>Author<th class='covers'>Covers</tr>")
+     "<tr><th class='count'>Books<th class='author'>Author<th class='covers'>Covers</tr>")
     (cl-loop for elem in (sort
 			  (bookiez--overview-entries
 			   (bookiez--filter-export bookiez-books))
@@ -1467,23 +1471,38 @@ It will be written to `bookiez-export-html-directory'.  Also see
 				     (bookiez--author-sort-key (nth 2 e2)))))
 	     do (insert
 		 (format
-		  "<tr><td class='count'>%s<td><a href='author-%s.html'>%s</a>"
+		  "<tr><td class='count'>%s<td class='author'><a href='author-%s.html'>%s</a>"
 		  (nth 1 elem)
 		  (bookiez--file-name (nth 2 elem))
 		  (nth 2 elem)))
-	     (insert "<td class='covers'>")
-	     (let ((did nil))
-	       (dolist (book (bookiez--author-books (nth 2 elem)))
-		 (when-let ((img (bookiez--html-img-file book t)))
-		   (setq did t)
-		   (insert
-		    (format
-		     "<a href='isbn-%s.html'><img loading='lazy' class='cover' src='%s' %s></a>"
-		     (bookiez--file-name (plist-get book :isbn))
-		     (file-name-nondirectory img)
-		     (bookiez--image-dimensions img)))))
-	       (unless did
-		 (insert "<div class='no-image'>&nbsp;</div>")))
+	     (insert
+	      (format
+	       "<td class='covers' style='background: url(shelf.png) %spx;'>"
+	       (random 780)))
+	     (let ((covers
+		    (cl-loop for book in (bookiez--author-books (nth 2 elem))
+			     for img = (bookiez--html-img-file book t)
+			     when img
+			     collect (format
+				      "<a href='isbn-%s.html'><img loading='lazy' class='cover' src='%s' %s></a>"
+				      (bookiez--file-name
+				       (plist-get book :isbn))
+				      (file-name-nondirectory img)
+				      (bookiez--image-dimensions img)))))
+	       (cond
+		((not covers)
+		 (insert "<div class='no-image'>&nbsp;</div>"))
+		((> (length covers) 6)
+		 (mapc #'insert covers))
+		(t
+		 (let ((before (random 6)))
+		   (cl-loop repeat before
+			    do (insert
+				"<span class='space-image'></span>"))
+		   (mapc #'insert covers)
+		   (cl-loop repeat (- 6 before)
+			    do (insert
+				"<span class='space-image'></span>"))))))
 	     (bookiez--export-html-author (nth 2 elem)))))
 
 (defun bookiez--file-name (name)
