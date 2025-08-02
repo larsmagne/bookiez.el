@@ -303,8 +303,7 @@ scanning device to both enter new books and to mark them as read.")
 	(thumb nil))
     (unless isbn
       (when-let ((match (isbn-search-goodreads (concat author " " title))))
-	(when (y-or-n-p (format "Is this %s? "
-				(car match)))
+	(when (y-or-n-p (format "Is this %s? " (car match)))
 	  (setq isbn (car match)
 		thumb (cadr match)))))
     (unless isbn
@@ -690,7 +689,7 @@ for instance, being notified when they publish a new book."
   "m" #'bookiez-author-search-missing-books
   "q" #'bury-buffer
   "e" #'bookiez-add-ebook-manually
-  "a" #'bookiez-add-audiobook-manually
+  "B" #'bookiez-add-audiobook-manually
   "g" #'bookiez-refresh-buffer
   "z" #'bookiez-next-list)
 
