@@ -701,9 +701,12 @@ for instance, being notified when they publish a new book."
   (when (and (not (vtable-current-table))
 	     (not (bobp)))
     (forward-line -1))
-  (unless (vtable-current-table)
-    (user-error "Nothing to refresh here"))
-  (vtable-revert-command))
+  (if (not (vtable-current-table))
+      (message "Nothing to refresh here"))
+  (let ((point (point)))
+    (vtable-revert-command)
+    (unless (fboundp 'vtable-comparitor)
+      (goto-char point))))
 
 (defun bookiez-next-list ()
   "Choose the next author from the *Bookiez* buffer."
