@@ -186,7 +186,7 @@
 	(insert "\n")
 	(add-face-text-property (point-min) (point-max) 'vtable)
 	(when save
-	  (bookiez-add-book book (eq save 'ebook) nil)
+	  (bookiez-add-book book nil nil)
 	  (bookiez-cache-image isbn (plist-get book :cover-url)))
 	(let ((file (bookiez--cache-file isbn)))
 	  (when (file-exists-p file)
@@ -275,14 +275,20 @@
       (start-process "*mpg*" nil "mpg123" "-a" "hw:0" "-n" "10" file))))
 
 (defun bookiez-add-ebook-manually ()
+  "Add an ebook manually (by typing in author name and title)."
   (interactive)
-  (bookiez-add-book-manually t))
+  (bookiez-add-book-manually "ebook"))
+
+(defun bookiez-add-audiobook-manually ()
+  "Add an aubio book manually (by typing in author name and title)."
+  (interactive)
+  (bookiez-add-book-manually "audiobook"))
 
 (defvar bookiez-author-history nil)
 
 (defvar bookiez--unknown-isbn -4000)
 
-(defun bookiez-add-book-manually (&optional ebook)
+(defun bookiez-add-book-manually (&optional format)
   (interactive)
   (let ((author (read-string "Author: " nil 'bookiez-author-history))
 	(title (read-string "Title: "))
@@ -310,13 +316,13 @@
 			    :isbn isbn
 			    :published-date date
 			    :cover-url thumb)
-		      ebook (y-or-n-p "Book read? "))
+		      format (y-or-n-p "Book read? "))
     (bookiez-cache-image isbn thumb)
     (setq bookiez-last-isbn nil)))
 
 (defvar bookiez-books nil)
 
-(defun bookiez-add-book (new-book ebook read)
+(defun bookiez-add-book (new-book format read)
   (bookiez--possibly-read-database)
   (let ((do-insert t)
 	(update-read t))
@@ -336,7 +342,7 @@
 	     (setq do-insert nil))
     (cond
      (do-insert
-      (bookiez-set new-book :format (if ebook "ebook" "paper"))
+      (bookiez-set new-book :format (or format "paper"))
       (bookiez-set new-book :status (if read "read" "unread"))
       (bookiez-set new-book :bought-date (format-time-string "%Y-%m-%d"))
       (push new-book bookiez-books)
@@ -671,6 +677,7 @@ for instance, being notified when they publish a new book."
   "m" #'bookiez-author-search-missing-books
   "q" #'bury-buffer
   "e" #'bookiez-add-ebook-manually
+  "a" #'bookiez-add-audiobook-manually
   "z" #'bookiez-next-list)
 
 (defun bookiez-next-list ()
@@ -833,9 +840,10 @@ for instance, being notified when they publish a new book."
 (defun bookiez--get-book-data (book column table)
   (pcase (vtable-column table column)
     ("Format"
-     (if (equal (plist-get book :format) "paper")
-	 "📖"
-       "📄"))
+     (pcase (plist-get book :format)
+       ("paper" "📖")
+       ("ebook" "📄")
+       ("audiobook" "🎧")))
     ("Status"
      (cond ((equal (plist-get book :status) "unread")
 	    "📕")
@@ -1055,14 +1063,14 @@ for instance, being notified when they publish a new book."
 	   "Do not include books that are just edited by the author. "
 	   (or extra-text "")))))
     (cl-loop for line in (string-lines result)
-	     if (string-match ";.*;.*;" line)
-	     collect (split-string
-		      (replace-regexp-in-string "\\[[0-9]+\\]" "" line)
-		      "; *")
-	     into data
-	     else
-	     collect line into comments
-	     finally (cl-return (list data comments)))))
+	     if (string-match "		;.*;.*;" line)
+	   collect (split-string
+		    (replace-regexp-in-string "\\[[0-9]+\\]" "" line)
+		    "; *")
+	   into data
+	   else
+	   collect line into comments
+	   finally (cl-return (list data comments)))))
 
 (define-derived-mode bookiez-search-mode special-mode "Bookiez"
   "Mode to search for books."
@@ -1574,9 +1582,12 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	   (insert
 	    (format
 	     "<td class='format'>%s<td class='status'>%s<td class='date'>%s%s<td class='date'>%s%s<td><a href='%s.html'>%s</a></tr>"
-	     (if (equal (plist-get book :format) "paper")
-		 "<span title='paper'>📖</span>"
-	       "<span title='ebook'>📄</span>")
+	     (format "<span title='%s'>%s</span>"
+		     (plist-get book :format)
+		     (pcase (plist-get book :format)
+		       ("paper" "📖")
+		       ("ebook" "📄")
+		       ("audiobook" "🎧")))
 	     (cond
 	      ((equal (plist-get book :status) "unread")
 	       "<span title='unread'>📕</span>")
