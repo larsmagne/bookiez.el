@@ -125,6 +125,8 @@
 	  :title (nth 1 data)
 	  :published-date (or (nth 2 data) "1970-01-01")
 	  :cover-url (nth 3 data)
+	  :format "paper"
+	  :status "unread"
 	  :genres (cl-coerce (seq-take (nth 5 data) 2) 'vector))))
 
 (defun bookiez-find-isbn ()
