@@ -48,6 +48,11 @@
 (defvar bookiez-barcode-device nil
   "The libinput name of the barcode scanner.")
 
+(defvar bookiez-mark-doubles-as-read nil
+  "What to do when entering the same ISBN twice.
+Setting this to a non-nil value makes sense if you're using a
+scanning device to both enter new books and to mark them as read.")
+
 (defun bookiez-set (book slot value)
   ;; Note: Can't remove the :author slot, since it's first.
   (if (null value)
@@ -326,20 +331,22 @@
 (defun bookiez-add-book (new-book format read)
   (bookiez--possibly-read-database)
   (let ((do-insert t)
-	(update-read t))
+	(update-read nil))
     (cl-loop for book in bookiez-books
 	     when (or (equal (plist-get new-book :isbn) (plist-get book :isbn))
 		      (and (equal (plist-get new-book :author)
 				  (plist-get book :author))
 			   (equal (plist-get new-book :title)
 				  (plist-get book :author))))
-	     do (message "%s/%s (%s) already exists in the database%s"
-			 (plist-get new-book :author)
-			 (plist-get new-book :title)
-			 (plist-get new-book :isbn)
-			 (if (setq update-read book)
-			     "; marking as read"
-			   ""))
+	     do
+	     (message "%s/%s (%s) already exists in the database%s"
+		      (plist-get new-book :author)
+		      (plist-get new-book :title)
+		      (plist-get new-book :isbn)
+		      (if (and bookiez-mark-doubles-as-read
+			       (setq update-read book))
+			  "; marking as read"
+			""))
 	     (setq do-insert nil))
     (cond
      (do-insert
