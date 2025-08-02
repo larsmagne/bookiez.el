@@ -387,10 +387,11 @@ scanning device to both enter new books and to mark them as read.")
 (defun bookiez-read-database ()
   (setq bookiez-books nil)
   (when (file-exists-p bookiez-data-file)
-    (with-temp-buffer
-      (insert-file-contents bookiez-data-file)
-      (setq bookiez-books 
-	    (cl-coerce (json-parse-buffer :object-type 'plist) 'list)))))
+    (let ((coding-system-for-read 'utf-8))
+      (with-temp-buffer
+	(insert-file-contents bookiez-data-file)
+	(setq bookiez-books 
+	      (cl-coerce (json-parse-buffer :object-type 'plist) 'list))))))
 
 (defun bookiez-write-database ()
   (bookiez--write-data bookiez-books)
