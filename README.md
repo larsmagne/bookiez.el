@@ -123,3 +123,33 @@ So then you
 After restarting bookiez, bookiez will then automatically listen for
 events from the barcode scanner and mark new scanned ISBNs as newly
 bought books.  If you scan a code twice, it'll mark the book as read.
+
+Webcam Barcode Camera
+=====================
+
+Instead of a USB HID barcode scanner, you can also use a webcam with
+barcode scanning.  For instance, under X you may automate it something
+like this:
+
+	#!/bin/bash
+
+	echo "Finding Emacs with bookiez..."
+	BOOKIEZ=$(xdotool search --name 'Bookiez List')
+
+	if [ "$BOOKIEZ" = "" ]; then
+		echo "ERROR: Couldn't find *Bookiez List*"
+		exit 10
+	fi
+
+	echo "Scanning..."
+	zbarcam --set ean13.enable=1 --raw --prescale=640x480 /dev/video48 | while read -r line; do
+		echo -n "Sending $line ..."
+		CURRENTWINDOW=$(xdotool getwindowfocus)
+		xdotool windowfocus "$BOOKIEZ"
+		xdotool key --window "$BOOKIEZ" i
+		xdotool type --window "$BOOKIEZ" "$line"
+		xdotool key --window "$BOOKIEZ" Return
+		xdotool windowfocus "$CURRENTWINDOW"
+		aplay --quiet ~/sound/woop.wav
+		echo " sent"
+	done
