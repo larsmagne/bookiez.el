@@ -59,7 +59,7 @@ If ALL-RESULTS, return the results from all providors."
     (dolist (type isbn-lookup-types)
       (aset result index
 	    (cons (funcall (intern (format "isbn-lookup-%s" type))
-			   isbn result index)
+			   isbn result index isbn)
 		  nil))
       (cl-incf index))
     ;; Then we exit when we've got all the results (but don't wait
@@ -153,49 +153,69 @@ If ALL-RESULTS, return the results from all providors."
 
 ;;; Google Books API
 
-(defun isbn-lookup-google (isbn vector index)
+(defun isbn-lookup-google (isbn vector index find-isbn)
   (url-retrieve
    (format "https://www.googleapis.com/books/v1/volumes?q=%s%s"
 	   isbn
 	   (if isbn-google-key
 	       (format "&key=%s" isbn-google-key)
 	     ""))
-   'isbn-parse-google (list vector index) t))
+   'isbn-parse-google (list vector index find-isbn) t))
 
-(defun isbn-parse-google (_status vector index)
+(defun isbn-parse-google (_status vector index find-isbn)
   (goto-char (point-min))
-  (when (search-forward "\n\n" nil t)
-    (let* ((main-data (cdr (assq 'items (json-read))))
-	   (data (and main-data (aref main-data 0)))
-	   (volume (assq 'volumeInfo data))
-	   (isbn (cl-loop for entry across
-			  (cdr (assq 'industryIdentifiers volume))
-			  return (cdr (assq 'identifier entry))))
-	   title author thumbnail date)
-      (setq title (cdr (assq 'title volume)))
-      (when (assq 'subtitle volume)
-	(setq title (concat title " ("
-			    (cdr (assq 'subtitle volume)) ")")))
-      (setq author (mapconcat 'identity (cdr (assq 'authors volume))
-			      ", "))
-      (setq date (cdr (assq 'publishedDate volume))
-	    thumbnail (cdr (assq 'thumbnail
-				 (cdr (assq 'imageLinks volume)))))
-      (when (and title author)
-	(setcdr (aref vector index)
-		(list title author date thumbnail isbn)))))
-  (kill-buffer (current-buffer)))
+  (let ((charset nil)
+	json)
+    (when (re-search-forward "^content-type.*charset=\\([-A-Z0-9]+\\)" nil t)
+      (setq charset (match-string 1)))
+    (when (search-forward "\n\n" nil t)
+      (if (and charset
+	       (equal (downcase charset) "utf-8"))
+	  ;; Eh; there must be a better way to get the mojibake in
+	  ;; the http buffer (which is multibyte!) decoded.
+	  (let ((string (buffer-substring (point) (point-max))))
+	    (delete-region (point) (point-max))
+	    (with-temp-buffer
+	      (set-buffer-multibyte nil)
+	      (insert string)
+	      (set-buffer-multibyte t)
+	      (goto-char (point-min))
+	      (setq json (cdr (assq 'items (json-read))))))
+	(setq json (cdr (assq 'items (json-read)))))
+      (cl-loop for data across (setq k json)
+	       for volume = (assq 'volumeInfo data)
+	       for isbn = (cl-loop for entry across
+				   (cdr (assq 'industryIdentifiers volume))
+				   for i = (cdr (assq 'identifier entry))
+				   when (equal i find-isbn)
+				   return i)
+	       for title = (cdr (assq 'title volume))
+	       when isbn
+	       return
+	       (let ((author (mapconcat 'identity (cdr (assq 'authors volume))
+					", "))
+		     (date (cdr (assq 'publishedDate volume)))
+		     (thumbnail
+		      (cdr (assq 'thumbnail
+				 (cdr (assq 'imageLinks volume))))))
+		 (when (assq 'subtitle volume)
+		   (setq title (concat title " ("
+				       (cdr (assq 'subtitle volume)) ")")))
+		 (when (and title author)
+		   (setcdr (aref vector index)
+			   (list title author date thumbnail)))))
+      (kill-buffer (current-buffer)))))
 
 ;;; OpenLibrary API
 
-(defun isbn-lookup-openlibrary (isbn vector index)
+(defun isbn-lookup-openlibrary (isbn vector index find-isbn)
   (url-retrieve
    (format "http://openlibrary.org/api/books?bibkeys=ISBN:%s&format=json&jscmd=data"
 	   isbn)
    'isbn-parse-openlibrary
-   (list vector index) t))
+   (list vector index find-isbn) t))
 
-(defun isbn-parse-openlibrary (_status vector index)
+(defun isbn-parse-openlibrary (_status vector index _find-isbn)
   (goto-char (point-min))
   (when (search-forward "\n\n" nil t)
     (let ((data (cdar (json-read)))
@@ -241,7 +261,7 @@ If ALL-RESULTS, return the results from all providors."
 
 ;;; ISBNdb API.
 
-(defun isbn-lookup-isbndb (isbn vector index)
+(defun isbn-lookup-isbndb (isbn vector index _find-isbn)
   (let ((url-request-extra-headers
          `(("Authorization" . ,isbn-isbndb-key))))
     (url-retrieve
@@ -281,7 +301,7 @@ If ALL-RESULTS, return the results from all providors."
 			      "Short Stories" "Novels")
   "Too-general genres to be ignored.")
 
-(defun isbn-lookup-goodreads (isbn vector index)
+(defun isbn-lookup-goodreads (isbn vector index _find-isbn)
   (let ((dummy (get-buffer-create " *goodreads*")))
     (url-retrieve
      (format "https://www.goodreads.com/search?q=%s&qid=" isbn)
