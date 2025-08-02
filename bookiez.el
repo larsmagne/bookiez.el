@@ -193,7 +193,8 @@ scanning device to both enter new books and to mark them as read.")
 	(add-face-text-property (point-min) (point-max) 'vtable)
 	(when save
 	  (bookiez-add-book book nil nil)
-	  (bookiez-cache-image isbn (plist-get book :cover-url)))
+	  (when (isbn-valid-p isbn)
+	    (bookiez-cache-image isbn (plist-get book :cover-url))))
 	(let ((file (bookiez--cache-file isbn)))
 	  (when (file-exists-p file)
 	    (insert-image (create-image file nil nil :max-width 800
@@ -246,7 +247,8 @@ scanning device to both enter new books and to mark them as read.")
 		   (bookiez-set book :cover-isbn isbn))
 		 t))))
     (bookiez-write-database)
-    (if (cl-plusp (length (plist-get book :cover-url)))
+    (if (and (cl-plusp (length (plist-get book :cover-url)))
+	     (isbn-valid-p bookiez-book-isbn))
 	(bookiez-cache-image bookiez-book-isbn (plist-get book :cover-url) t)
       (message "Unable to find cover image for %s" bookiez-book-isbn))
     (clear-image-cache)
@@ -941,7 +943,8 @@ for instance, being notified when they publish a new book."
 		     string))))
     (when-let ((urls (isbn-covers (plist-get book :isbn))))
       (bookiez-set book :cover-url (car urls))
-      (bookiez-cache-image (plist-get book :isbn) (car urls)))
+      (when (isbn-valid-p (plist-get book :isbn))
+	(bookiez-cache-image (plist-get book :isbn) (car urls))))
     (bookiez-write-database)))
 
 (defun bookiez-fill-isbn ()
@@ -973,8 +976,9 @@ for instance, being notified when they publish a new book."
 
 (defun bookiez-fill-image-cache ()
   (cl-loop for book in bookiez-books
-	   do (bookiez-cache-image (plist-get book :isbn)
-				   (plist-get book :cover-url))))
+	   do (when (isbn-valid-p (plist-get book :isbn))
+		(bookiez-cache-image (plist-get book :isbn)
+				     (plist-get book :cover-url)))))
 
 (defun bookiez--cache-file (isbn)
   (expand-file-name (concat isbn ".jpg") bookiez-cache))
