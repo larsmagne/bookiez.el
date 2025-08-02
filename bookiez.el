@@ -1437,7 +1437,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 `bookiez-export-html-command'."
   (interactive)
   (let ((dir bookiez-export-html-directory))
-    (message "Exporting...")
+    (message "Exporting to %s ..." dir)
     (unless (file-exists-p dir)
       (make-directory dir))
     (copy-file (concat (file-name-directory (find-library-name "bookiez.el"))
