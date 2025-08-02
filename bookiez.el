@@ -638,6 +638,9 @@ for instance, being notified when they publish a new book."
 (defun bookiez-add-isbn (isbn)
   "Add the book with ISBN to the database."
   (interactive "sISBN: ")
+  ;; Allow people to paste in ISBNs that are formatted with dashes and
+  ;; whatever, but clean out all non-ISBN characters.
+  (setq isbn (replace-regexp-in-string "[^0-9X]" "" isbn))
   (bookiez-display-isbn isbn t))
 
 (define-derived-mode bookiez-mode special-mode "Bookiez"
