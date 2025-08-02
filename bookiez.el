@@ -655,9 +655,7 @@ for instance, being notified when they publish a new book."
     (bookiez-display-isbn isbn t)
     (with-current-buffer buffer
       (when (eq major-mode 'bookiez-list-mode)
-	(when-let ((book (bookiez-lookup isbn)))
-	  (when (vtable-current-object)
-	    (vtable-revert-command)))))))
+	(bookiez-refresh-buffer)))))
 
 (define-derived-mode bookiez-mode special-mode "Bookiez"
   "Mode for bookiez mode buffers."
