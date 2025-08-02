@@ -296,9 +296,11 @@ If ALL-RESULTS, return the results from all providors."
 	      (setcdr
 	       (aref vector index)
 	       (list
-		(isbn--decode-html-entities (gethash "name" json))
-		(isbn--decode-html-entities
-		 (gethash "name" (elt (gethash "author" json) 0)))
+		(string-clean-whitespace
+		 (isbn--decode-html-entities (gethash "name" json)))
+		(string-clean-whitespace
+		 (isbn--decode-html-entities
+		  (gethash "name" (elt (gethash "author" json) 0))))
 		(cl-loop for p in (dom-by-tag dom 'p)
 			 when (equal (dom-attr p 'data-testid)
 				     "publicationInfo")
