@@ -918,8 +918,7 @@ for instance, being notified when they publish a new book."
     (bookiez-set book :author author)
     (bookiez-set book :title title)
     (bookiez-write-database)
-    (forward-line 1)
-    (vtable-revert-command)))
+    (bookiez-refresh-buffer)))
 
 (defun bookiez-author-edit-all-data ()
   "Edit all the data of the book under point."
