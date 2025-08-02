@@ -1767,15 +1767,4 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	       (plist-get book :isbn)))
       (setf (gethash (plist-get book :isbn) table) t))))
 
-(defun bookiez--add-some-covers ()
-  (dolist (book bookiez-books)
-    (when (string-match "The Paris Review #\\([0-9]+\\)"
-			(plist-get book :title))
-      (let ((url (format
-		  "https://store.theparisreview.org/cdn/shop/products/%s.jpeg"
-		  (match-string 1 (plist-get book :title)))))
-	(bookiez-set book :cover-url url)
-	(bookiez-cache-image (plist-get book :isbn) url))))
-  (bookiez-write-database))
-
 (provide 'bookiez)
