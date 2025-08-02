@@ -322,7 +322,8 @@ scanning device to both enter new books and to mark them as read.")
 			    :published-date date
 			    :cover-url thumb)
 		      format (y-or-n-p "Book read? "))
-    (bookiez-cache-image isbn thumb)
+    (when (isbn-valid-p isbn)
+      (bookiez-cache-image isbn thumb))
     (setq bookiez-last-isbn nil)))
 
 (defvar bookiez-books nil)
