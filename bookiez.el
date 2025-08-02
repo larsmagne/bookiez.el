@@ -121,8 +121,9 @@
 
 (defun bookiez--isbn-lookup (isbn)
   (when-let ((data (isbn-lookup isbn)))
-    (list :author (nth 0 data)
-	  :title (nth 1 data)
+    (list :author (nth 1 data)
+	  :title (nth 0 data)
+	  :isbn isbn
 	  :published-date (or (nth 2 data) "1970-01-01")
 	  :cover-url (nth 3 data)
 	  :format "paper"
@@ -649,7 +650,13 @@ for instance, being notified when they publish a new book."
   ;; Allow people to paste in ISBNs that are formatted with dashes and
   ;; whatever, but clean out all non-ISBN characters.
   (setq isbn (replace-regexp-in-string "[^0-9X]" "" isbn))
-  (bookiez-display-isbn isbn t))
+  (let ((buffer (current-buffer)))
+    (bookiez-display-isbn isbn t)
+    (with-current-buffer buffer
+      (when (eq major-mode 'bookiez-list-mode)
+	(when-let ((book (bookiez-lookup isbn)))
+	  (when (vtable-current-object)
+	    (vtable-revert-command)))))))
 
 (define-derived-mode bookiez-mode special-mode "Bookiez"
   "Mode for bookiez mode buffers."
