@@ -944,8 +944,8 @@ for instance, being notified when they publish a new book."
 		     string))))
     (when (isbn-valid-p (plist-get book :isbn))
       (when-let ((urls (isbn-covers (plist-get book :isbn))))
-	(bookiez-set book :cover-url (car urls)
-	(bookiez-cache-image (plist-get book :isbn) (car urls)))))
+	(bookiez-set book :cover-url (car urls))
+	(bookiez-cache-image (plist-get book :isbn) (car urls))))
     (bookiez-write-database)))
 
 (defun bookiez-fill-isbn ()
@@ -1765,5 +1765,16 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	       (plist-get book :title)
 	       (plist-get book :isbn)))
       (setf (gethash (plist-get book :isbn) table) t))))
+
+(defun bookiez--add-some-covers ()
+  (dolist (book bookiez-books)
+    (when (string-match "The Paris Review #\\([0-9]+\\)"
+			(plist-get book :title))
+      (let ((url (format
+		  "https://store.theparisreview.org/cdn/shop/products/%s.jpeg"
+		  (match-string 1 (plist-get book :title)))))
+	(bookiez-set book :cover-url url)
+	(bookiez-cache-image (plist-get book :isbn) url))))
+  (bookiez-write-database))
 
 (provide 'bookiez)
