@@ -26,6 +26,7 @@
 (require 'shr)
 (require 'browse-url)
 (require 'time-date)
+(require 'sgml-mode)
 
 (defvar isbn-isbndb-key nil
   "To use the isbndb lookup, get an access key.")
@@ -74,18 +75,18 @@ If ALL-RESULTS, return the results from all providors."
    ;; 978-1-56619-909-4
    ((length= isbn 13)
     (format "%s-%s-%s-%s-%s"
-	    (subseq isbn 0 3)
-	    (subseq isbn 3 4)
-	    (subseq isbn 4 9)
-	    (subseq isbn 9 12)
-	    (subseq isbn 12)))
+	    (substring isbn 0 3)
+	    (substring isbn 3 4)
+	    (substring isbn 4 9)
+	    (substring isbn 9 12)
+	    (substring isbn 12)))
    ;; 0-321-57346-X
    ((length= isbn 10)
     (format "%s-%s-%s-%s"
-	    (subseq isbn 0 1)
-	    (subseq isbn 1 4)
-	    (subseq isbn 4 9)
-	    (subseq isbn 9)))
+	    (substring isbn 0 1)
+	    (substring isbn 1 4)
+	    (substring isbn 4 9)
+	    (substring isbn 9)))
    (t
     isbn)))
 
@@ -295,8 +296,9 @@ If ALL-RESULTS, return the results from all providors."
 	      (setcdr
 	       (aref vector index)
 	       (list
-		(gethash "name" json)
-		(gethash "name" (elt (gethash "author" json) 0))
+		(isbn--decode-html-entities (gethash "name" json))
+		(isbn--decode-html-entities
+		 (gethash "name" (elt (gethash "author" json) 0)))
 		(cl-loop for p in (dom-by-tag dom 'p)
 			 when (equal (dom-attr p 'data-testid)
 				     "publicationInfo")
@@ -392,6 +394,16 @@ If ALL-RESULTS, return the results from all providors."
 	     'xml)
 	    'isbn)
 	   collect (nth 2 elem)))
+
+;;; Decoding.
+
+(defun isbn--decode-html-entities (string)
+  (let ((mm-url-html-entities
+	 (cl-loop for name across sgml-char-names
+		  for char from 0
+		  when name
+		  collect (cons (intern name) char))))
+    (mm-url-decode-entities-string string)))
 
 (provide 'isbn)
 
