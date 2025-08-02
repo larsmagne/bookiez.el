@@ -411,6 +411,7 @@
   "c" #'bookiez-edit-author
   "SPC" #'bookiez-toggle-tracking
   "n" #'bookiez-search-tracked-authors
+  "g" #'bookiez-refresh-buffer
   "e" #'bookiez-add-ebook-manually)
 
 (defun bookiez-goodreads ()
@@ -685,7 +686,19 @@ for instance, being notified when they publish a new book."
   "q" #'bury-buffer
   "e" #'bookiez-add-ebook-manually
   "a" #'bookiez-add-audiobook-manually
+  "g" #'bookiez-refresh-buffer
   "z" #'bookiez-next-list)
+
+(defun bookiez-refresh-buffer ()
+  "Regenerate the table in the current buffer."
+  (interactive)
+  ;; Ensure we're in a table.
+  (when (and (not (vtable-current-table))
+	     (not (bobp)))
+    (forward-line -1))
+  (unless (vtable-current-table)
+    (user-error "Nothing to refresh here"))
+  (vtable-revert-command))
 
 (defun bookiez-next-list ()
   "Choose the next author from the *Bookiez* buffer."
@@ -1537,7 +1550,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 				      (bookiez--file-name
 				       (plist-get book :isbn))
 				      (file-name-nondirectory img)
-				      (bookiez--image-dimensions img)))))
+				      (bookiez--img-dimensions img)))))
 	       (cond
 		((not covers)
 		 (insert "<div class='no-image'>&nbsp;</div>"))
