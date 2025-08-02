@@ -523,7 +523,7 @@ If given a prefix, don't mark it read on a specific date."
     (unless book
       (error "No book on the current line"))
     ;; Remove the previous data (if any) and mark as unread.
-    (bookiez-set book :read [])
+    (bookiez-set book :read-dates nil)
     (bookiez-set book :status "unread")
     (bookiez-write-database)
     (vtable-update-object (vtable-current-table) book book)
