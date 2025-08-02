@@ -326,7 +326,8 @@ scanning device to both enter new books and to mark them as read.")
 		      format (y-or-n-p "Book read? "))
     (when (isbn-valid-p isbn)
       (bookiez-cache-image isbn thumb))
-    (setq bookiez-last-isbn nil)))
+    (setq bookiez-last-isbn nil)
+    (bookiez-refresh-buffer)))
 
 (defvar bookiez-books nil)
 
@@ -941,10 +942,10 @@ for instance, being notified when they publish a new book."
 		   (if (zerop (length string))
 		       nil
 		     string))))
-    (when-let ((urls (isbn-covers (plist-get book :isbn))))
-      (bookiez-set book :cover-url (car urls))
-      (when (isbn-valid-p (plist-get book :isbn))
-	(bookiez-cache-image (plist-get book :isbn) (car urls))))
+    (when (isbn-valid-p (plist-get book :isbn))
+      (when-let ((urls (isbn-covers (plist-get book :isbn))))
+	(bookiez-set book :cover-url (car urls)
+	(bookiez-cache-image (plist-get book :isbn) (car urls)))))
     (bookiez-write-database)))
 
 (defun bookiez-fill-isbn ()
