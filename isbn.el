@@ -27,6 +27,7 @@
 (require 'browse-url)
 (require 'time-date)
 (require 'sgml-mode)
+(require 'mm-url)
 
 (defvar isbn-isbndb-key nil
   "To use the isbndb lookup, get an access key.")
