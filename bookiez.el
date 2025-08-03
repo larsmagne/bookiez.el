@@ -939,6 +939,7 @@ for instance, being notified when they publish a new book."
   "Edit all the data of the book under point."
   (interactive)
   (let ((book (vtable-current-object)))
+    ;; First edit simple slots.
     (cl-loop for slot in '( :author :title :isbn :published-date :bought-date
 			    :cover-url :format)
 	     do (bookiez-set
@@ -946,16 +947,30 @@ for instance, being notified when they publish a new book."
 		 (let ((string
 			(read-string
 			 (format "%s: "
-				 (capitalize (substring  (symbol-name slot) 1)))
+				 (capitalize (substring (symbol-name slot) 1)))
 			 (plist-get book slot))))
 		   (if (zerop (length string))
 		       nil
 		     string))))
+    ;; Then edit vector slots.
+    (cl-loop for slot in '( :read-dates)
+	     do (bookiez-set
+		 book slot
+		 (let ((string
+			(read-string
+			 (format "%s: "
+				 (capitalize (substring (symbol-name slot) 1)))
+			 (string-join (plist-get book slot) ", "))))
+		   (if (zerop (length string))
+		       nil
+		     (cl-coerce (split-string string ", ") 'vector)))))
+    ;; Refresh the cache.
     (when (isbn-valid-p (plist-get book :isbn))
       (when-let ((urls (isbn-covers (plist-get book :isbn))))
 	(bookiez-set book :cover-url (car urls))
 	(bookiez-cache-image (plist-get book :isbn) (car urls))))
-    (bookiez-write-database)))
+    (bookiez-write-database)
+    (bookiez-refresh-buffer)))
 
 (defun bookiez-fill-isbn ()
   "Query for ISBN for books that lack it."
