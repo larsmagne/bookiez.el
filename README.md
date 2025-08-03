@@ -71,7 +71,8 @@ commands in each buffer.
 Data Format and Exports
 =======================
 
-The data is written in a JSON format to `bookiez-data-file'.
+The data is written in a JSON format to `bookiez-data-file', which is
+~/.emacs.d/bookiez.json by default.
 
 You can export the data to HTML (suitable for putting on a web site to
 look at your books while on the go) by using the `M-x
