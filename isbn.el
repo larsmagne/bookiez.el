@@ -155,7 +155,7 @@ If ALL-RESULTS, return the results from all providors."
 
 (defun isbn-lookup-google (isbn vector index find-isbn)
   (url-retrieve
-   (format "https://www.googleapis.com/books/v1/volumes?q=%s%s"
+   (format "https://www.googleapis.com/books/v1/volumes?q=+isbn:%s%s"
 	   isbn
 	   (if isbn-google-key
 	       (format "&key=%s" isbn-google-key)
