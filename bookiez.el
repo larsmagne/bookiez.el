@@ -692,15 +692,15 @@ for instance, being notified when they publish a new book."
   "b" #'bookiez-mark-as-bought
   "DEL" #'bookiez-author-delete-book
   "G" #'bookiez-list-genres
-  "M-g" #'bookiez-edit-genres
+  "z" #'bookiez-edit-genres
+  "Z" #'bookiez-copy-previous-genres
   "s" #'bookiez-author-search
   "n" #'bookiez-author-search-new-books
   "m" #'bookiez-author-search-missing-books
   "q" #'bury-buffer
   "e" #'bookiez-add-ebook-manually
   "B" #'bookiez-add-audiobook-manually
-  "g" #'bookiez-refresh-buffer
-  "z" #'bookiez-next-list)
+  "g" #'bookiez-refresh-buffer)
 
 (defun bookiez-refresh-buffer ()
   "Regenerate the table in the current buffer."
@@ -1437,6 +1437,23 @@ and a book that's been successfully entered."
     (message "Updated genres to %s"
 	     (string-join (plist-get book :genres) ","))
     (bookiez-write-database)))
+
+(defun bookiez-copy-previous-genres ()
+  "Set the genres of the current book to a copy of the previous book's genres."
+  (interactive)
+  (let ((book (vtable-current-object))
+	(previous (save-excursion
+		    (forward-line -1)
+		    (vtable-current-object))))
+    (when (eq book previous)
+      (user-error "No previous book"))
+    (let ((genres (plist-get previous :genres)))
+      (unless genres
+	(user-error "The previous book doesn't have any genres"))
+      (bookiez-set book :genres (plist-get previous :genres))
+      (message "Updated genres to %s"
+	       (string-join (plist-get book :genres) ","))
+      (bookiez-write-database))))
 
 ;;; Export data to other format.
 
