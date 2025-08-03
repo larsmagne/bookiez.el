@@ -189,4 +189,9 @@ div.links > span {
     padding: 2px;
     border: 0px;
   }
+
+  div.top {
+    top: 5px;
+    right: 5px;
+  }
 }
