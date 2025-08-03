@@ -1459,14 +1459,13 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (message "Exporting to %s ..." dir)
     (unless (file-exists-p dir)
       (make-directory dir))
-    (copy-file (concat (file-name-directory (find-library-name "bookiez.el"))
-		       "assets/bookiez.css")
-	       (expand-file-name "bookiez.css" dir)
-	       t t)
-    (copy-file (concat (file-name-directory (find-library-name "bookiez.el"))
-		       "assets/shelf.png")
-	       (expand-file-name "shelf.png" dir)
-	       t t)
+    (dolist (file '("bookiez.css" "shelf.png" "shelf-2x.png"))
+      (let ((orig (concat (file-name-directory (find-library-name "bookiez.el"))
+			  "assets/" file))
+	    (dest (expand-file-name file dir)))
+	(when (or (not (file-exists-p dest))
+		  (file-newer-than-file-p orig dest))
+	  (copy-file orig dest t t))))
     (bookiez--generate-html-genres)
     (bookiez--export-html-overview)
     (bookiez--export-html-isbns)
@@ -1563,7 +1562,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 		  (nth 2 elem)))
 	     (insert
 	      (format
-	       "<td class='covers' style='background: url(shelf.png) %spx;'>"
+	       "<td class='covers' style='background: image-set(url(shelf.png) 1x, url(shelf-2x.png) 2x) %spx;'>"
 	       (bookiez--random 780 100 :shift)))
 	     (let ((covers
 		    (cl-loop for book in (bookiez--author-books (nth 2 elem))
