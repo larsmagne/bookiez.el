@@ -1566,17 +1566,26 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	       (bookiez--random 780 100 :shift)))
 	     (let ((covers
 		    (cl-loop for book in (bookiez--author-books (nth 2 elem))
-			     for img = (bookiez--html-img-file book t)
-			     when img
+			     for imgs = (bookiez--html-img-file book t)
+			     when imgs
 			     ;; We're using lazy loading of the covers on the
 			     ;; overview page, because otherwise the initial
 			     ;; download will be very big.
-			     collect (format
-				      "<a href='isbn-%s.html'><img loading='lazy' class='cover' src='%s' %s></a>"
-				      (bookiez--file-name
-				       (plist-get book :isbn))
-				      (file-name-nondirectory img)
-				      (bookiez--img-dimensions img)))))
+			     collect
+			     (format
+			      "<a href='isbn-%s.html'><img loading='lazy' class='cover' src='%s' srcset='%s' %s></a>"
+			      (bookiez--file-name
+			       (plist-get book :isbn))
+			      (file-name-nondirectory (car imgs))
+			      (string-join
+			       (cl-loop for img in imgs
+					for i from 1
+					collect (format
+						 "%s %dx"
+						 (file-name-nondirectory img)
+						 i))
+			       ", ")
+			      (bookiez--img-dimensions (car imgs))))))
 	       (cond
 		((not covers)
 		 (insert "<div class='no-image'>&nbsp;</div>"))
@@ -1623,8 +1632,9 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	       "<a href='isbn-%s.html'><img class='cover' src='%s' %s></a>"
 	       (bookiez--file-name (plist-get book :isbn))
 	       (file-name-nondirectory
-		(bookiez--html-img-file book t))
-	       (bookiez--img-dimensions (bookiez--html-img-file book t)))))
+		(car (bookiez--html-img-file book t)))
+	       (bookiez--img-dimensions
+		(car (bookiez--html-img-file book t))))))
 	   (insert
 	    (format
 	     "<td class='format'>%s<td class='status'>%s<td class='date'>%s%s<td class='date'>%s%s<td><a href='%s.html'>%s</a></tr>"
@@ -1744,7 +1754,8 @@ It will be written to `bookiez-export-html-directory'.  Also see
 		  (concat "isbn-"
 			  (bookiez--file-name (plist-get book :isbn))
 			  ".webp")
-		  bookiez-export-html-directory)))
+		  bookiez-export-html-directory))
+	    smalls)
 	;; The image to display on the book page -- no scaling (but we
 	;; strip exif data).
 	(when (or (not (file-exists-p img))
@@ -1754,17 +1765,29 @@ It will be written to `bookiez-export-html-directory'.  Also see
 			"-strip" file img))
 	;; The smaller image to display on the overview pages -- scale
 	;; down.
-	(let ((small (expand-file-name
-		      (concat "small-isbn-"
-			      (bookiez--file-name (plist-get book :isbn))
-			      ".webp")
-		      bookiez-export-html-directory)))
-	  (when (or (not (file-exists-p small))
-		    (file-newer-than-file-p file small))
-	    (remhash small bookiez--image-size-table)
-	    (call-process "convert" nil nil nil
-			  "-strip" "-resize" "x100" file small))
-	  (if return-small small img))))))
+	(setq
+	 smalls
+	 (cl-loop for (size thumb) in
+		  (list (list 100 (concat
+				   "small-isbn-"
+				   (bookiez--file-name (plist-get book :isbn))
+				   ".webp"))
+			(list 200 (concat
+				   "small-isbn-"
+				   (bookiez--file-name (plist-get book :isbn))
+				   "-2x.webp")))
+		  for small = (expand-file-name
+			       thumb bookiez-export-html-directory)
+		  do (let ()
+		       (when (or (not (file-exists-p small))
+				 (file-newer-than-file-p file small))
+			 (remhash small bookiez--image-size-table)
+			 (call-process "convert" nil nil nil
+				       "-strip"
+				       "-resize" (format "x%d" size)
+				       file small)))
+		  collect small))
+	(if return-small smalls img)))))
 
 (defun bookiez--generate-html-genres ()
   (dolist (genre (mapcar (lambda (elem) (plist-get elem :genre))
