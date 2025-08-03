@@ -129,7 +129,7 @@ scanning device to both enter new books and to mark them as read.")
     (list :author (nth 1 data)
 	  :title (nth 0 data)
 	  :isbn isbn
-	  :published-date (or (nth 2 data) "1970-01-01")
+	  :published-date (nth 2 data)
 	  :cover-url (nth 3 data)
 	  :format "paper"
 	  :status "unread"
@@ -168,8 +168,10 @@ scanning device to both enter new books and to mark them as read.")
 	(insert "Status " (plist-get book :status) "\n")
 	(unless (equal (plist-get book :format) "paper")
 	  (insert "Format " (plist-get book :format) "\n"))
-	(insert "Published "
-		(bookiez--format-date (plist-get book :published-date) t) "\n")
+	(when (plist-get book :published-date)
+	  (insert "Published "
+		  (bookiez--format-date (plist-get book :published-date) t)
+		  "\n"))
 	(when (plist-get book :bought-date)
 	  (insert "Bought "
 		  (bookiez--format-date (plist-get book :bought-date)) "\n"))
@@ -300,7 +302,7 @@ scanning device to both enter new books and to mark them as read.")
   (interactive)
   (let ((author (read-string "Author: " nil 'bookiez-author-history))
 	(title (read-string "Title: "))
-	(date "1970-01-01")
+	(date nil)
 	(isbn bookiez-last-isbn)
 	(thumb nil))
     (unless isbn
@@ -308,8 +310,10 @@ scanning device to both enter new books and to mark them as read.")
 	(when (y-or-n-p (format "Is this %s? " (car match)))
 	  (setq isbn (car match)
 		thumb (cadr match)))))
-    (unless isbn
-      (setq isbn (read-string "ISBN: ")))
+    (if (not isbn)
+	(setq isbn (read-string "ISBN: "))
+      (when-let ((b (bookiez--isbn-lookup isbn)))
+	(setq date (plist-get b :published-date))))
     ;; If we have no ISBN, then use a fake one.
     (when (zerop (length isbn))
       (let ((table (make-hash-table :test #'equal)))
@@ -792,7 +796,9 @@ for instance, being notified when they publish a new book."
     (bookiez-search-author-new-books
      author
      (cl-loop for book in bookiez-books
-	      when (member author (split-string (plist-get book :author) ", "))
+	      when (and (member author
+				(split-string (plist-get book :author) ", "))
+			(plist-get book :published-date))
 	      maximize (string-to-number
 			(substring (plist-get book :published-date) 0 4))))))
 
@@ -856,7 +862,9 @@ for instance, being notified when they publish a new book."
 	  ""
 	(bookiez--format-date value)))
      ("Published"
-      (substring value 0 4))
+      (if (equal value "")
+	  ""
+	(substring value 0 4)))
      ("Bought"
       (cond
        ((null value)
@@ -886,9 +894,9 @@ for instance, being notified when they publish a new book."
 	   (t
 	    "📗")))
     ("Published"
-     (plist-get book :published-date))
+     (or (plist-get book :published-date) ""))
     ("Bought"
-     (plist-get book :bought-date))
+     (or (plist-get book :bought-date) ""))
     ("Read"
      (or (elt (plist-get book :read-dates) 0) ""))
     ("Author"
@@ -907,7 +915,7 @@ for instance, being notified when they publish a new book."
 (defun bookiez-author-display-book ()
   "Display the book under point."
   (interactive)
-  (bookiez-display-isbn (plist-get (vtable-current-object) :isbn)))
+  (bookiez-display-isbn-1 (plist-get (vtable-current-object) :isbn)))
 
 (defun bookiez-author-goodreads ()
   "Go to the Goodreads for the book."
@@ -1633,7 +1641,9 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	       "<span title='wishlist'>🎇</span>")
 	      (t
 	       "<span title='read'>📗</span>"))
-	     (bookiez--format-date (plist-get book :published-date) t)
+	     (if (not (plist-get book :published-date))
+		 ""
+	       (bookiez--format-date (plist-get book :published-date) t))
 	     (if (not inhibit-author)
 		 ""
 	       (concat
@@ -1681,7 +1691,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	  (insert "<div class='format'>Format <span class='format'>"
 		  (plist-get book :format) "</span></div>"))
 	;; Don't output this placeholder date.
-	(unless (equal (plist-get book :published-date) "1970-01-01")
+	(when (plist-get book :published-date)
 	  (insert "<div class='published'>Published <span class='date'>"
 		  (bookiez--format-date (plist-get book :published-date) t)
 		  "</span></div>"))
