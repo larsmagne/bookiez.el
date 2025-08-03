@@ -103,10 +103,6 @@ scanning device to both enter new books and to mark them as read.")
 (define-minor-mode bookiez-isbn-minor-mode
   "Minor mode to enter books by ISBN.")
 
-(define-derived-mode bookiez-book-mode special-mode "Bookiez"
-  "Mode to display a book."
-  (bookiez-isbn-minor-mode 1))
-
 (defvar-keymap bookiez-book-mode-map
   "&" #'bookiez-book-goodreads
   "l" #'bookiez
@@ -115,6 +111,10 @@ scanning device to both enter new books and to mark them as read.")
   "j" #'bookiez-query-jacket
   "f" #'bookiez-find-isbn
   "c" #'bookiez-book-edit)
+
+(define-derived-mode bookiez-book-mode special-mode "Bookiez"
+  "Mode to display a book."
+  (bookiez-isbn-minor-mode 1))
 
 (defvar bookiez-book-isbn nil)
 
@@ -672,11 +672,6 @@ for instance, being notified when they publish a new book."
       (when (eq major-mode 'bookiez-list-mode)
 	(bookiez-refresh-buffer)))))
 
-(define-derived-mode bookiez-mode special-mode "Bookiez"
-  "Mode for bookiez mode buffers."
-  (setq truncate-lines t)
-  (bookiez-isbn-minor-mode 1))
-
 (defvar-keymap bookiez-list-mode-map
   :parent vtable-map
   "RET" #'bookiez-author-display-book
@@ -701,6 +696,11 @@ for instance, being notified when they publish a new book."
   "e" #'bookiez-add-ebook-manually
   "B" #'bookiez-add-audiobook-manually
   "g" #'bookiez-refresh-buffer)
+
+(define-derived-mode bookiez-mode special-mode "Bookiez"
+  "Mode for bookiez mode buffers."
+  (setq truncate-lines t)
+  (bookiez-isbn-minor-mode 1))
 
 (defun bookiez-refresh-buffer ()
   "Regenerate the table in the current buffer."
