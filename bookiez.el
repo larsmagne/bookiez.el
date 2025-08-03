@@ -1627,14 +1627,19 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	   (if (not (file-exists-p
 		     (bookiez--cache-file (plist-get book :isbn))))
 	       (insert "<div class='no-image'>&nbsp;</div>")
-	     (insert
-	      (format
-	       "<a href='isbn-%s.html'><img class='cover' src='%s' %s></a>"
-	       (bookiez--file-name (plist-get book :isbn))
-	       (file-name-nondirectory
-		(car (bookiez--html-img-file book t)))
-	       (bookiez--img-dimensions
-		(car (bookiez--html-img-file book t))))))
+	     (let ((imgs (bookiez--html-img-file book t)))
+	       (insert
+		(format
+		 "<a href='isbn-%s.html'><img class='cover' src='%s' srcset='%s' %s></a>"
+		 (bookiez--file-name (plist-get book :isbn))
+		 (file-name-nondirectory (car imgs))
+		 (string-join
+		  (cl-loop for img in imgs
+			   for i from 1
+			   collect (format "%s %dx" (file-name-nondirectory img)
+					   i))
+		  ", ")
+		 (bookiez--img-dimensions (car imgs))))))
 	   (insert
 	    (format
 	     "<td class='format'>%s<td class='status'>%s<td class='date'>%s%s<td class='date'>%s%s<td><a href='%s.html'>%s</a></tr>"
