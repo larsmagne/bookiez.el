@@ -1247,15 +1247,18 @@ for instance, being notified when they publish a new book."
       (setq key (match-string 1 key))
       (if (equal key "ENTER")
 	  (when bookiez--libinput-queue
-	    (bookiez--execute-libinput)
+	    (bookiez-enter-isbn
+	     (string-join (nreverse bookiez--libinput-queue)))
 	    (setq bookiez--libinput-queue nil))
 	(push key bookiez--libinput-queue)))))
 
-(defun bookiez--execute-libinput ()
+(defun bookiez-enter-isbn (isbn)
+  "Enter ISBN into the database, and also make some sounds.
+A different sound will be made on invalid ISBN, an ISBN that can't be found,
+and a book that's been successfully entered."
   (bookiez-play "71-On the Beach.mp3")
   (bookiez-play
-   (pcase (bookiez-add-isbn
-	   (string-join (nreverse bookiez--libinput-queue)))
+   (pcase (bookiez-add-isbn isbn)
      (:invalid-isbn "74-kaffe matthews - still striped.mp3")
      (:not-found "45-VENOZ TKS - Carry On Sergeant. Right Oh, Sir!.mp3")
      (:found "61-KREVmorse.mp3"))))

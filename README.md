@@ -124,6 +124,24 @@ After restarting bookiez, bookiez will then automatically listen for
 events from the barcode scanner and mark new scanned ISBNs as newly
 bought books.  If you scan a code twice, it'll mark the book as read.
 
+Other Inputs
+============
+
+In general, any barcode reading device that can trigger a command can
+be used.  On the Emacs side, start an Emacs server with 
+`M-x server-start'.
+
+Then use `emacs-client' to enter a book into the database by calling a
+script that looks like this (with the ISBN as the first parameter):
+
+	#!/bin/bash
+	emacsclient --eval "(bookiez-enter-isbn \"$1\")"
+
+The `bookiez-enter-isbn' function will play different sort of beeps
+based on whether the ISBN is invalid, whether it can't be found, or
+whether it entered the book successfully.  This way you can enter
+books rapidly without looking at the screen.
+
 Webcam Barcode Camera
 =====================
 
