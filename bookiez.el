@@ -1569,6 +1569,9 @@ It will be written to `bookiez-export-html-directory'.  Also see
 		    (cl-loop for book in (bookiez--author-books (nth 2 elem))
 			     for img = (bookiez--html-img-file book t)
 			     when img
+			     ;; We're using lazy loading of the covers on the
+			     ;; overview page, because otherwise the initial
+			     ;; download will be very big.
 			     collect (format
 				      "<a href='isbn-%s.html'><img loading='lazy' class='cover' src='%s' %s></a>"
 				      (bookiez--file-name
@@ -1735,17 +1738,23 @@ It will be written to `bookiez-export-html-directory'.  Also see
 
 (defun bookiez--html-img-file (book &optional return-small)
   (let ((file (bookiez--cache-file (plist-get book :isbn))))
+    ;; We're exporting to webp instead of jpeg because webp is (on the
+    ;; dataset I tried, at least) about half the size.
     (when (file-exists-p file)
       (let ((img (expand-file-name
 		  (concat "isbn-"
 			  (bookiez--file-name (plist-get book :isbn))
 			  ".webp")
 		  bookiez-export-html-directory)))
+	;; The image to display on the book page -- no scaling (but we
+	;; strip exif data).
 	(when (or (not (file-exists-p img))
 		  (file-newer-than-file-p file img))
 	  (remhash img bookiez--image-size-table)
 	  (call-process "convert" nil nil nil
 			"-strip" file img))
+	;; The smaller image to display on the overview pages -- scale
+	;; down.
 	(let ((small (expand-file-name
 		      (concat "small-isbn-"
 			      (bookiez--file-name (plist-get book :isbn))
