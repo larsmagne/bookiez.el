@@ -1499,7 +1499,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (message "Exporting to %s ..." dir)
     (unless (file-exists-p dir)
       (make-directory dir))
-    (dolist (file '("bookiez.css" "shelf.png" "shelf-2x.png"))
+    (dolist (file '("bookiez.css" "shelf.webp" "shelf-2x.webp"))
       (let ((orig (concat (file-name-directory (find-library-name "bookiez.el"))
 			  "assets/" file))
 	    (dest (expand-file-name file dir)))
@@ -1602,7 +1602,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 		  (nth 2 elem)))
 	     (insert
 	      (format
-	       "<td class='covers' style='background: image-set(url(shelf.png) 1x, url(shelf-2x.png) 2x) %spx;'>"
+	       "<td class='covers' style='background: image-set(url(shelf.webp) 1x, url(shelf-2x.webp) 2x) %spx;'>"
 	       (bookiez--random 780 100 :shift)))
 	     (let ((covers
 		    (cl-loop for book in (bookiez--author-books (nth 2 elem))
