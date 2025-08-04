@@ -1662,7 +1662,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	     (let ((imgs (bookiez--html-img-file book t)))
 	       (insert
 		(format
-		 "<a href='isbn-%s.html'><img class='cover' src='%s' srcset='%s' %s></a>"
+		 "<a href='isbn-%s.html'><img class='cover' loading='lazy' src='%s' srcset='%s' %s></a>"
 		 (bookiez--file-name (plist-get book :isbn))
 		 (file-name-nondirectory (car imgs))
 		 (string-join
