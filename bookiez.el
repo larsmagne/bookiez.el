@@ -1487,6 +1487,7 @@ For instance, to deploy to a web server, you could set this to:
 It will be written to `bookiez-export-html-directory'.  Also see
 `bookiez-export-html-command'."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((dir bookiez-export-html-directory))
     (message "Exporting to %s ..." dir)
     (unless (file-exists-p dir)
