@@ -212,49 +212,56 @@ scanning device to both enter new books and to mark them as read.")
   (copy-file file (bookiez--cache-file bookiez-book-isbn) t)
   (clear-image-cache))
 
-(defun bookiez-query-jacket ()
+(defun bookiez-query-jacket (&optional force)
   "Re-download the book jacket."
-  (interactive nil bookiez-book-mode)
-  (unless (isbn-valid-p bookiez-book-isbn)
-    (user-error "Invalid ISBN %s; can't look up" bookiez-book-isbn))
+  (interactive "P" bookiez-book-mode)
   (let ((book (bookiez-lookup bookiez-book-isbn)))
-    (cl-loop for isbn in (cons bookiez-book-isbn
-			       ;; There may be other ISBNs for
-			       ;; this book where there is a cover.
-			       (delete
-				bookiez-book-isbn
-				(isbn-isbns-librarything bookiez-book-isbn)))
-	     while
-	     (not
-	      (cl-loop
-	       for cover in (isbn-covers isbn)
-	       when
-	       (y-or-n-p
-		(format
-		 "Use this: %s"
-		 (with-current-buffer (url-retrieve-synchronously cover)
-		   (goto-char (point-min))
-		   (and (search-forward "\n\n" nil t)
-			(propertize
-			 " "
-			 'display (create-image
-				   (buffer-substring (point) (point-max))
-				   nil t
-				   :max-height 400
-				   :max-width 400))))))
-	       return
-	       (progn
-		 (bookiez-set book :cover-url cover)
-		 (unless (equal isbn bookiez-book-isbn)
-		   (bookiez-set book :cover-isbn isbn))
-		 t))))
-    (bookiez-write-database)
-    (if (and (cl-plusp (length (plist-get book :cover-url)))
-	     (isbn-valid-p bookiez-book-isbn))
-	(bookiez-cache-image bookiez-book-isbn (plist-get book :cover-url) t)
-      (message "Unable to find cover image for %s" bookiez-book-isbn))
-    (clear-image-cache)
-    (bookiez-display-isbn-1 bookiez-book-isbn)))
+    (if (and (plist-get book :cover-url)
+	     force)
+	(progn
+	  (bookiez-cache-image (plist-get book :isbn)
+			       (plist-get book :cover-url) t)
+	  (bookiez-display-isbn-1 bookiez-book-isbn)
+          (clear-image-cache))
+      (unless (isbn-valid-p bookiez-book-isbn)
+	(user-error "Invalid ISBN %s; can't look up" bookiez-book-isbn))
+      (cl-loop for isbn in (cons bookiez-book-isbn
+				 ;; There may be other ISBNs for
+				 ;; this book where there is a cover.
+				 (delete
+				  bookiez-book-isbn
+				  (isbn-isbns-librarything bookiez-book-isbn)))
+	       while
+	       (not
+		(cl-loop
+		 for cover in (isbn-covers isbn)
+		 when
+		 (y-or-n-p
+		  (format
+		   "Use this: %s"
+		   (with-current-buffer (url-retrieve-synchronously cover)
+		     (goto-char (point-min))
+		     (and (search-forward "\n\n" nil t)
+			  (propertize
+			   " "
+			   'display (create-image
+				     (buffer-substring (point) (point-max))
+				     nil t
+				     :max-height 400
+				     :max-width 400))))))
+		 return
+		 (progn
+		   (bookiez-set book :cover-url cover)
+		   (unless (equal isbn bookiez-book-isbn)
+		     (bookiez-set book :cover-isbn isbn))
+		   t))))
+      (bookiez-write-database)
+      (if (and (cl-plusp (length (plist-get book :cover-url)))
+	       (isbn-valid-p bookiez-book-isbn))
+	  (bookiez-cache-image bookiez-book-isbn (plist-get book :cover-url) t)
+	(message "Unable to find cover image for %s" bookiez-book-isbn))
+      (clear-image-cache)
+      (bookiez-display-isbn-1 bookiez-book-isbn))))
 
 (defun bookiez-book-edit ()
   "Edit the book data in the current buffer."
