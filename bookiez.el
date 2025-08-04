@@ -888,7 +888,7 @@ for instance, being notified when they publish a new book."
      (cond ((equal (plist-get book :status) "unread")
 	    "📕")
 	   ((equal (plist-get book :status) "skipped")
-	    "❌")
+	    "🖐️")
 	   ((equal (plist-get book :status) "wishlist")
 	    "✨")
 	   (t
@@ -1685,7 +1685,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	      ((equal (plist-get book :status) "unread")
 	       "<span title='unread'>📕</span>")
 	      ((equal (plist-get book :status) "skipped")
-	       "<span title='skipped'>❌</span>")
+	       "<span title='skipped'>🖐️</span>")
 	      ((equal (plist-get book :status) "wishlist")
 	       "<span title='wishlist'>✨</span>")
 	      (t
