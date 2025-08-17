@@ -544,6 +544,35 @@ If given a prefix, don't mark it read on a specific date."
     (vtable-update-object (vtable-current-table) book book)
     (message "Marked %s as unread" (plist-get book :title))))
 
+(defun bookiez-clear-bought-date ()
+  "Clear the bought date from the book under point."
+  (interactive)
+  (let ((book (vtable-current-object)))
+    (unless book
+      (error "No book on the current line"))
+    (bookiez-set book :bought-date nil)
+    (bookiez-write-database)
+    (vtable-update-object (vtable-current-table) book book)
+    (message "Cleared bought date for %s" (plist-get book :title))))
+
+(defun bookiez-query-published-date ()
+  "Query the published for the book under point."
+  (interactive)
+  (let ((book (vtable-current-object)))
+    (unless book
+      (error "No book on the current line"))
+    (unless (isbn-valid-p (plist-get book :isbn))
+      (error "Invalid ISBN %s" (plist-get book :isbn)))
+    (let ((data (bookiez--isbn-lookup (plist-get book :isbn))))
+      (unless (plist-get data :published-date)
+	(error "No published date"))
+      (bookiez-set book :published-date
+		   (plist-get data :published-date))
+      (bookiez-write-database)
+      (vtable-update-object (vtable-current-table) book book)
+      (message "Update published date to %s"
+	       (plist-get data :published-date)))))
+
 (defun bookiez-mark-as-hidden ()
   "Mark the book under point as hidden."
   (interactive)
@@ -1449,16 +1478,18 @@ and a book that's been successfully entered."
     (bookiez-set
      book :genres
      (cl-coerce
-      (completing-read-multiple "Genres: "
-				(mapcar (lambda (elem)
-					  (plist-get elem :genre))
-					(bookiez--genres))
-				nil nil
-				(string-join (plist-get book :genres) ","))
+      (let ((completion-ignore-case t))
+	(completing-read-multiple "Genres: "
+				  (mapcar (lambda (elem)
+					    (plist-get elem :genre))
+					  (bookiez--genres))
+				  nil nil
+				  (string-join (plist-get book :genres) ",")))
       'vector))
     (message "Updated genres to %s"
 	     (string-join (plist-get book :genres) ","))
-    (bookiez-write-database)))
+    (bookiez-write-database))
+  (forward-line 1))
 
 (defun bookiez-copy-previous-genres ()
   "Set the genres of the current book to a copy of the previous book's genres."
@@ -1475,7 +1506,8 @@ and a book that's been successfully entered."
       (bookiez-set book :genres (plist-get previous :genres))
       (message "Updated genres to %s"
 	       (string-join (plist-get book :genres) ","))
-      (bookiez-write-database))))
+      (bookiez-write-database)))
+  (forward-line 1))
 
 ;;; Export data to other format.
 
