@@ -200,12 +200,23 @@ This is not used any more.")
 	    (bookiez-cache-image isbn (plist-get book :cover-url))))
 	(let ((file (bookiez--cache-file isbn)))
 	  (when (file-exists-p file)
-	    (insert-image (create-image file nil nil :max-width 800
-					:max-height 800))
+	    (insert-image (bookiez--create-image
+			   file :max-width 800 :max-height 800))
 	    (insert "\n")))
 	(goto-char (point-min))
 	(setq bookiez-last-isbn nil))
       :found)))
+
+(defun bookiez--create-image (file &rest props)
+  (when (file-remote-p file)
+    (let ((local (expand-file-name (file-name-nondirectory file)
+				   "/tmp/bookiez/")))
+      (unless (file-exists-p (file-name-directory local))
+	(make-directory (file-name-directory local)))
+      (unless (file-exists-p local)
+	(copy-file file local))
+      (setq file local)))
+  (apply #'create-image file nil nil props))
 
 (defun bookiez-change-jacket (file)
   "Change the cover jacket image used for the book."
@@ -944,7 +955,7 @@ for instance, being notified when they publish a new book."
      (let ((file (bookiez--cache-file (plist-get book :isbn))))
        (propertize "*" 'display 
 		   (if (file-exists-p file)
-		       (create-image file nil nil :height 150 :max-width 150)
+		       (bookiez--create-image file :height 150 :max-width 150)
 		     (let ((svg (svg-create 60 100)))
 		       (svg-rectangle svg 0 0 60 100 :fill "#202020")
 		       (svg-image svg))))))))
