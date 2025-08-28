@@ -102,7 +102,7 @@ scanner no matter which window has focus -- that way you can just grab
 the scanner after buying some new books without futzing around at all.
 But this requires some setup.
 
-	apt install evtest
+	apt install libinput-tools
 	adduser `whoami` input
 	
 Then log out and in again to ensure that you're allowed to read the
