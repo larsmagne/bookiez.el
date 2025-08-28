@@ -30,9 +30,6 @@
 (require 'libinput)
 (require 'find-func)
 
-(defvar bookiez-file "~/.emacs.d/bookiez.data"
-  "The file where the data will be stored.")
-
 (defvar bookiez-data-file "~/.emacs.d/bookiez.json"
   "The file where the data will be stored.")
 
@@ -52,6 +49,10 @@
   "What to do when entering the same ISBN twice.
 Setting this to a non-nil value makes sense if you're using a
 scanning device to both enter new books and to mark them as read.")
+
+(defvar bookiez-file "~/.emacs.d/bookiez.data"
+  "The file where the data will be stored.
+This is not used any more.")
 
 (defun bookiez-set (book slot value)
   ;; Note: Can't remove the :author slot, since it's first.
