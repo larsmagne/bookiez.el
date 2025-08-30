@@ -1327,6 +1327,7 @@ for instance, being notified when they publish a new book."
   "Enter ISBN into the database, and also make some sounds.
 A different sound will be made on invalid ISBN, an ISBN that can't be found,
 and a book that's been successfully entered."
+  (bookiez--possibly-read-database)
   (bookiez-play "71-On the Beach.mp3")
   (bookiez-play
    (pcase (bookiez-add-isbn isbn)
