@@ -29,6 +29,7 @@
 (require 'multisession)
 (require 'libinput)
 (require 'find-func)
+(require 'format-spec)
 
 (defvar bookiez-data-file "~/.emacs.d/bookiez.json"
   "The file where the data will be stored.")
@@ -1532,7 +1533,10 @@ and a book that's been successfully entered."
 
 For instance, to deploy to a web server, you could set this to:
 
-  rsync -av /var/tmp/bookiez-html/ www@server-name:html/bookiez/")
+  rsync -av %d www@server-name:html/bookiez/
+
+This is a `format-spec' string, and the `d' spec will expand to
+`bookiez-export-html-directory'.")
 
 (defun bookiez-export-html ()
   "Export the database to HTML.
@@ -1557,7 +1561,8 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (message "Exporting...done to %s" bookiez-export-html-directory)
     (when bookiez-export-html-command
       (message "Deploying %s..." bookiez-export-html-command)
-      (shell-command bookiez-export-html-command)
+      (shell-command (format-spec bookiez-export-html-command
+				  `((?d . ,bookiez-export-html-directory))))
       (message "Deploying %s...done" bookiez-export-html-command))))
 
 (defmacro bookiez--html (class title file-name &rest body)
