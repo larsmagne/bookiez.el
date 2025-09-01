@@ -1524,7 +1524,7 @@ and a book that's been successfully entered."
 
 ;;; Export data to other format.
 
-(defvar bookiez-export-html-directory "/var/tmp/bookiez-html/"
+(defvar bookiez-export-html-directory "~/.cache/bookiez-html/"
   "The directory where HTML exports will be written to.")
 
 (defvar bookiez-export-html-command nil
