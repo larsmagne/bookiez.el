@@ -1562,8 +1562,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (when bookiez-export-html-command
       (message "Deploying %s..." bookiez-export-html-command)
       (shell-command (format-spec bookiez-export-html-command
-				  `((?d . ,bookiez-export-html-directory))))
-      (message "Deploying %s...done" bookiez-export-html-command))))
+				  `((?d . ,bookiez-export-html-directory)))))))
 
 (defmacro bookiez--html (class title file-name &rest body)
   (declare (debug t) (indent 3))
