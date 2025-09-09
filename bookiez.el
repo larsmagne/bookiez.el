@@ -836,7 +836,7 @@ for instance, being notified when they publish a new book."
 (defun bookiez-author-search ()
   "Search for books by the author under point."
   (interactive)
-  (bookiez-search-author (nth 2 (vtable-current-object))))
+  (bookiez-search-author (plist-get (vtable-current-object) :author)))
 
 (defun bookiez-author-search-new-books ()
   "Search for new books by the author under point."
@@ -1168,14 +1168,14 @@ for instance, being notified when they publish a new book."
 	   "Do not include books that are just edited by the author. "
 	   (or extra-text "")))))
     (cl-loop for line in (string-lines result)
-	     if (string-match "		;.*;.*;" line)
-	   collect (split-string
-		    (replace-regexp-in-string "\\[[0-9]+\\]" "" line)
-		    "; *")
-	   into data
-	   else
-	   collect line into comments
-	   finally (cl-return (list data comments)))))
+	     if (string-match ";.*;.*;" line)
+	     collect (split-string
+		      (replace-regexp-in-string "\\[[0-9]+\\]" "" line)
+		      "; *")
+	     into data
+	     else
+	     collect line into comments
+	     finally (cl-return (list data comments)))))
 
 (define-derived-mode bookiez-search-mode special-mode "Bookiez"
   "Mode to search for books."
