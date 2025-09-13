@@ -112,7 +112,8 @@ This is not used any more.")
   "J" #'bookiez-change-jacket
   "j" #'bookiez-query-jacket
   "f" #'bookiez-find-isbn
-  "c" #'bookiez-book-edit)
+  "c" #'bookiez-book-edit
+  "w" #'bookiez-book-jacket-file)
 
 (define-derived-mode bookiez-book-mode special-mode "Bookiez"
   "Mode to display a book."
@@ -225,6 +226,15 @@ This is not used any more.")
   (copy-file file (bookiez--cache-file bookiez-book-isbn) t)
   (clear-image-cache))
 
+(defun bookiez-book-jacket-file ()
+  "Copy the file name of the jacket to the kill ring."
+  (interactive nil bookiez-book-mode)
+  (let ((file (bookiez--cache-file bookiez-book-isbn)))
+    (unless (file-exists-p file)
+      (user-error "No jacket for %s" bookiez-book-isbn))
+    (kill-new file)
+    (message "Copied %s" file)))
+
 (defun bookiez-query-jacket (&optional force)
   "Re-download the book jacket."
   (interactive "P" bookiez-book-mode)
@@ -318,9 +328,18 @@ This is not used any more.")
 
 (defvar bookiez--unknown-isbn -4000)
 
+(defun bookiez--authors ()
+  (sort (seq-uniq (mapcar (lambda (book)
+			    (plist-get book :author))
+			  bookiez-books))
+	#'string<))
+
 (defun bookiez-add-book-manually (&optional format)
   (interactive)
-  (let ((author (read-string "Author: " nil 'bookiez-author-history))
+  (let ((author (completing-read
+		 "Author: "
+		 (bookiez--authors)
+		 nil nil nil 'bookiez-author-history))
 	(title (read-string "Title: "))
 	(date nil)
 	(isbn bookiez-last-isbn)
@@ -884,7 +903,7 @@ for instance, being notified when they publish a new book."
      :columns '((:name "Format")
 		(:name "Status")
 		(:name "Read" :min-width 12)
-		(:name "Author" :max-width 30)
+		(:name "Author" :max-width 25)
 		(:name "Title"))
      :objects-function (or selector (lambda () bookiez-books))
      :getter #'bookiez--get-book-data
