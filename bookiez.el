@@ -109,6 +109,7 @@ This is not used any more.")
   "&" #'bookiez-book-goodreads
   "l" #'bookiez
   "q" #'bury-buffer
+  "E" #'bookiez-export-html
   "J" #'bookiez-change-jacket
   "j" #'bookiez-query-jacket
   "f" #'bookiez-find-isbn
@@ -466,6 +467,7 @@ This is not used any more.")
   "SPC" #'bookiez-toggle-tracking
   "n" #'bookiez-search-tracked-authors
   "g" #'bookiez-refresh-buffer
+  "E" #'bookiez-export-html
   "e" #'bookiez-add-ebook-manually)
 
 (defun bookiez-goodreads ()
@@ -744,6 +746,7 @@ for instance, being notified when they publish a new book."
   :parent vtable-map
   "RET" #'bookiez-author-display-book
   "l" #'bookiez
+  "E" #'bookiez-export-html
   "A" #'bookiez-author-display-author
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
