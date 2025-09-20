@@ -4,19 +4,19 @@ ISBN lookup providers, and then stores the information.
 
 The information is then presented either on a per-author basis:
 
-![](https://lars.ingebrigtsen.no/?p=114764)
+![](https://lars.ingebrigtsen.no/wp-content/uploads/2025/07/2025-07-25-3.jpg)
 
 And you can list all the books by the author:
 
-![](https://lars.ingebrigtsen.no/?p=114765)
+![](https://lars.ingebrigtsen.no/wp-content/uploads/2025/07/2025-07-25-4.jpg)
 
 Or you can list all the books in one buffer:
 
-![](https://lars.ingebrigtsen.no/?p=114766)
+![](https://lars.ingebrigtsen.no/wp-content/uploads/2025/07/2025-07-25-5.jpg)
 
 And you can look at the detailed information about the book:
 
-![](https://lars.ingebrigtsen.no/?p=114767)
+![](https://lars.ingebrigtsen.no/wp-content/uploads/2025/07/2025-07-25-6.jpg)
 
 bookiez keeps track of the date you bought the book, when it was
 published, and when you marked it as read (or "skipped").
@@ -91,7 +91,7 @@ If you have a lot of books to enter, it's strongly recommended to get
 an ISBN barcode scanner.  I've been using a Datalogic Gryphon D120 for
 over a decade:
 
-![](https://lars.ingebrigtsen.no/?p=114768)
+![](https://lars.ingebrigtsen.no/wp-content/uploads/2025/07/2025-07-25-7.jpg)
 
 It's most convenient if it works like a USB HID keyboard and just
 outputs the ISBN followed by a `RET', which will make it work
