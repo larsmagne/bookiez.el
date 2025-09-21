@@ -115,9 +115,10 @@
      (let ((error (gethash "error" message)))
        (if (not (eq error :null))
 	   (error "Error: %s" (gethash "message" error))
-	 (gethash "text" (elt (gethash "content"
-				       (elt (gethash "output" message) 0))
-			      0)))))))
+	 (cl-loop for elem across (gethash "output" message)
+		  for content = (elt (gethash "content" elem) 0)
+		  when content
+		  return (gethash "text" content)))))))
 
 (provide 'query-assistant)
 
