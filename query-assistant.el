@@ -109,7 +109,7 @@
    "https://api.openai.com/v1/responses"
    `(("Authorization" . ,(format "Bearer %s" query-assistant-openai-key)))
    (query-assistant--hash
-    (list "model" "o4-mini")
+    (list "model" "gpt-4.1-mini")
     (list "input" query))
    (lambda (message)
      (let ((error (gethash "error" message)))
