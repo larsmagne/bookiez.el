@@ -68,8 +68,10 @@
    (query-assistant--hash
     (list "contents"
 	  (vector (query-assistant--hash
-		   (list "parts" (vector (query-assistant--hash
-					  (list "text" query))))))))
+		   (list "parts" (if (stringp query)
+				     (vector (query-assistant--hash
+					      (list "text" query)))
+				   query))))))
    (lambda (message)
      (let ((error (gethash "error" message)))
        (if (and error
