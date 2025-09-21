@@ -74,12 +74,12 @@
      (let ((error (gethash "error" message)))
        (if (and error
 		(not (eq error :null)))
-	   (error "Error: %s" (gethash "message" error)))
-       (gethash "text"
-		(elt (gethash "parts"
-			      (gethash "content"
-				       (elt (gethash "candidates" message) 0)))
-		     0))))))
+	   (error "Error: %s" (gethash "message" error))
+	 (gethash "text"
+		  (elt (gethash "parts"
+				(gethash "content"
+					 (elt (gethash "candidates" message) 0)))
+		       0)))))))
 
 (defun query-assistant--backend-perplexity (query)
   (list
@@ -109,7 +109,7 @@
    "https://api.openai.com/v1/responses"
    `(("Authorization" . ,(format "Bearer %s" query-assistant-openai-key)))
    (query-assistant--hash
-    (list "model" "gpt-4.1-mini")
+    (list "model" "o4-mini")
     (list "input" query))
    (lambda (message)
      (let ((error (gethash "error" message)))
