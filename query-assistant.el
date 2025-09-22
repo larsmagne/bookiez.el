@@ -62,7 +62,7 @@
 
 (defun query-assistant--backend-gemini (query)
   (list
-   (concat "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
+   (concat "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="
 	   query-assistant-gemini-key)
    nil
    (query-assistant--hash
