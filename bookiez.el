@@ -916,14 +916,18 @@ for instance, being notified when they publish a new book."
 (defun bookiez--format-date (date &optional shorten)
   ;; If a book is registered on Jan 1, it usually means we don't
   ;; actually have the date.
-  (if (and shorten
-	   (length= date 10)
-	   (equal (substring date 4) "-01-01"))
-      (substring date 0 4)
+  (cond
+   ((and shorten
+	 (length= date 10)
+	 (equal (substring date 4) "-01-01"))
+    (substring date 0 4))
+   ((length= date 10)
     (string-clean-whitespace
      (format-time-string
       "%b %e, %Y"
-      (encode-time (decoded-time-set-defaults (iso8601-parse-date date)))))))
+      (encode-time (decoded-time-set-defaults (iso8601-parse-date date))))))
+    (t
+     date)))
 	
 (defun bookiez--formatter (value column table)
   (propertize
