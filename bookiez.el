@@ -40,7 +40,7 @@
 (defvar bookiez-last-isbn nil)
 (defvar bookiez-books nil)
 
-(defvar bookiez-assistant 'perplexity
+(defvar bookiez-assistant 'openai
   "What assistant to use.")
 
 (defvar bookiez-barcode-device nil
@@ -876,22 +876,23 @@ for instance, being notified when they publish a new book."
 (defun bookiez-author-search-missing-books ()
   "Search for missing books by the author under point."
   (interactive)
-  (let ((author (nth 0 (vtable-current-object))))
+  (let ((author (plist-get (vtable-current-object) :author)))
     (bookiez-search-author
      author
      (concat
-      "Do not include books from this list: "
+      "\n\nDo not include books from this list: \n\n"
       (string-join
        (cl-loop for book in bookiez-books
 		when (member author
 			     (split-string (plist-get book :author) ", "))
-		collect (plist-get book :title))
-       ", ")
+		collect (format "Do not include %s" (plist-get book :title)))
+       "\n ")
       ;; Apparently, something like this is needed to make it shut up
       ;; about what it's excluding.
-      "That is, if a book appeared on the preceding list, do not "
+      "\n\n That is, if a book appeared on the preceding list, do not "
       "include that in your output.  You do not need to mention that "
-      "you've excluded these books. "))))
+      "you've excluded these books. \n\nI repeat, do not include any of the "
+      "books listed above in your output."))))
 
 (defun bookiez-list (&optional selector)
   "List all the books."
