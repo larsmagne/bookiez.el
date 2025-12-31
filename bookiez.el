@@ -885,7 +885,9 @@ for instance, being notified when they publish a new book."
        (cl-loop for book in bookiez-books
 		when (member author
 			     (split-string (plist-get book :author) ", "))
-		collect (format "Do not include %s" (plist-get book :title)))
+		collect (format "Do not include %s"
+				(replace-regexp-in-string
+				 " (.*)\\'" "" (plist-get book :title))))
        "\n ")
       ;; Apparently, something like this is needed to make it shut up
       ;; about what it's excluding.
