@@ -33,6 +33,9 @@
 (defvar query-assistant-perplexity-key nil
   "The key to the Perplexity assistant.")
 
+(defvar query-assistant-claude-key nil
+  "The key to the Claude Anthropic assistant.")
+
 (defun query-assistant (assistant query)
   (cl-destructuring-bind (url headers data parser)
       (funcall (intern (format "query-assistant--backend-%s" assistant))
@@ -111,7 +114,7 @@
    "https://api.openai.com/v1/responses"
    `(("Authorization" . ,(format "Bearer %s" query-assistant-openai-key)))
    (query-assistant--hash
-    (list "model" "gpt-4.1-mini")
+    (list "model" "gpt-5.2")
     (list "input" query))
    (lambda (message)
      (let ((error (gethash "error" message)))
@@ -121,6 +124,28 @@
 		  for content = (elt (gethash "content" elem) 0)
 		  when content
 		  return (gethash "text" content)))))))
+
+(defun query-assistant--backend-claude (query)
+  (list
+   "https://api.anthropic.com/v1/messages"
+   `(("x-api-key" . ,query-assistant-claude-key)
+     ("anthropic-version" . "2023-06-01"))
+   (query-assistant--hash
+    (list "model" "claude-sonnet-4-5")
+    (list "max_tokens" 1000)
+    (list "messages"
+	  (vector
+	   (query-assistant--hash
+	    (list "role" "user")
+	    (list "content" query)))))
+   (lambda (message)
+     (let ((error (gethash "error" message)))
+       (if error
+	   (error "Error: %s" (gethash "message" error))
+	 (cl-loop for elem across (gethash "content" message)
+		  for text = (gethash "text" elem)
+		  when text
+		  return text))))))
 
 (provide 'query-assistant)
 
