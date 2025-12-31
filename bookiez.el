@@ -979,6 +979,10 @@ for instance, being notified when they publish a new book."
      (plist-get book :author))
     ("Title"
      (plist-get book :title))
+    ("Year"
+     (plist-get book :year))
+    ("Type"
+     (plist-get book :type))
     ("Cover"
      (let ((file (bookiez--cache-file (plist-get book :isbn))))
        (propertize "*" 'display 
@@ -1284,6 +1288,11 @@ for instance, being notified when they publish a new book."
 
 (defun bookiez--search-author-render (data &optional comments)
   (switch-to-buffer "*Bookiez Search*")
+  (setq data (cl-loop for (author title year type) in data
+		      collect (list :author author
+				    :title title
+				    :year year
+				    :type type)))
   (let ((inhibit-read-only t))
     (erase-buffer)
     (bookiez-search-mode)
@@ -1293,13 +1302,9 @@ for instance, being notified when they publish a new book."
        :divider-width 2
        :columns '((:name "Year" :primary t :max-width 10)
 		  (:name "Title" :max-width 40)
-		  (:name "Comment"))
-       :objects (mapcar (lambda (b)
-			  (list (nth 0 b) (nth 2 b) (nth 1 b) (nth 3 b)))
-			data)
-       :getter
-       (lambda (object column _table)
-	 (nth (1+ column) object))
+		  (:name "Type"))
+       :objects data
+       :getter #'bookiez--get-book-data
        :keymap bookiez-search-mode-map))
     (goto-char (point-max))
     (insert "\n")
