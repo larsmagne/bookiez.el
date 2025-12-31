@@ -893,8 +893,7 @@ for instance, being notified when they publish a new book."
       ;; about what it's excluding.
       "\n\n That is, if a book appeared on the preceding list, do not "
       "include that in your output.  You do not need to mention that "
-      "you've excluded these books. \n\nI repeat, do not include any of the "
-      "books listed above in your output."))))
+      "you've excluded these books. \n\nThe titles above may be approximate -- don't include books that have very similar-sounding names, either. "))))
 
 (defun bookiez-list (&optional selector)
   "List all the books."
