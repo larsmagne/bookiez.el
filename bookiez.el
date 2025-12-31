@@ -1338,7 +1338,7 @@ for instance, being notified when they publish a new book."
   "Search Biblio for the book under point."
   (interactive)
   (browse-url
-   (format "https://www.biblio.com/search.php?stage=1&title=%s %s"
+   (format "https://www.biblio.com/search.php?stage=1&author=%s&title=%s"
 	   (plist-get (vtable-current-object) :author)
 	   (plist-get (vtable-current-object) :title))))
 
