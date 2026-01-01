@@ -1590,6 +1590,9 @@ For instance, to deploy to a web server, you could set this to:
 This is a `format-spec' string, and the `d' spec will expand to
 `bookiez-export-html-directory'.")
 
+(defvar bookiez-export-html-hook nil
+  "Hook run after exporting HTML.")
+
 (defun bookiez-export-html ()
   "Export the database to HTML.
 It will be written to `bookiez-export-html-directory'.  Also see
@@ -1614,7 +1617,8 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (when bookiez-export-html-command
       (message "Deploying %s..." bookiez-export-html-command)
       (shell-command (format-spec bookiez-export-html-command
-				  `((?d . ,bookiez-export-html-directory)))))))
+				  `((?d . ,bookiez-export-html-directory)))))
+    (run-hooks 'bookiez-export-html-hook)))
 
 (defmacro bookiez--html (class title file-name &rest body)
   (declare (debug t) (indent 3))
@@ -1798,7 +1802,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	      ((equal (plist-get book :status) "wishlist")
 	       "<span title='wishlist'>✨</span>")
 	      ((equal (plist-get book :status) "reading")
-	       "<span title='unread'>🕯️</span>")
+	       "<span title='reading'>🕯️</span>")
 	      (t
 	       "<span title='read'>📗</span>"))
 	     (if (not (plist-get book :published-date))
