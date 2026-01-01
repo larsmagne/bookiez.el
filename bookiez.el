@@ -179,6 +179,11 @@ This is not used any more.")
 	(when (plist-get book :bought-date)
 	  (insert "Bought "
 		  (bookiez--format-date (plist-get book :bought-date)) "\n"))
+	(when (plist-get book :started-dates)
+	  (insert "Started "
+		  (mapconcat #'bookiez--format-date 
+			     (plist-get book :started-dates) ", ")
+		  "\n"))
 	(when (plist-get book :read-dates)
 	  (insert "Read "
 		  (mapconcat #'bookiez--format-date 
@@ -529,6 +534,17 @@ This is not used any more.")
   (interactive)
   (bookiez-mark-as-read nil "skipped"))
 
+(defun bookiez-mark-as-reading ()
+  "Mark the book under point as being in the process of being read."
+  (interactive)
+  (let ((book (vtable-current-object)))
+    (unless book
+      (error "No book on the current line"))
+      (bookiez-set book :started-dates
+		   (seq-concatenate 'vector (plist-get book :started-dates)
+				    (vector (format-time-string "%Y-%m-%d")))))
+  (bookiez-mark-as-read t "reading"))
+
 (defun bookiez-mark-as-wishlist ()
   "Mark the book under point as a wishlist item.
 I.e., this is a book that you haven't actually got yet, but plan
@@ -751,6 +767,7 @@ for instance, being notified when they publish a new book."
   "&" #'bookiez-author-goodreads
   "c" #'bookiez-author-edit-book
   "C" #'bookiez-author-edit-all-data
+  "R" #'bookiez-mark-as-reading
   "r" #'bookiez-mark-as-read
   "u" #'bookiez-mark-as-unread
   "k" #'bookiez-mark-as-skipped
@@ -968,6 +985,8 @@ for instance, being notified when they publish a new book."
 	    "🖐️")
 	   ((equal (plist-get book :status) "wishlist")
 	    "✨")
+	   ((equal (plist-get book :status) "reading")
+	    "🕯️")
 	   (t
 	    "📗")))
     ("Published"
@@ -1778,6 +1797,8 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	       "<span title='skipped'>🖐️</span>")
 	      ((equal (plist-get book :status) "wishlist")
 	       "<span title='wishlist'>✨</span>")
+	      ((equal (plist-get book :status) "reading")
+	       "<span title='unread'>🕯️</span>")
 	      (t
 	       "<span title='read'>📗</span>"))
 	     (if (not (plist-get book :published-date))
@@ -1838,6 +1859,14 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	  (insert "<div class='bought'>Bought <span class='date'>"
 		  (bookiez--format-date (plist-get book :bought-date))
 		  "</span></div>"))
+	(when (plist-get book :started-dates)
+	  (insert "<div class='published'>Started reading "
+		  (mapconcat (lambda (date)
+			       (concat "<span class='date'>"
+				       (bookiez--format-date date)
+				       "</span>"))
+			     (plist-get book :started-dates) ", ")
+		  "</div>"))
 	(when (plist-get book :read-dates)
 	  (insert "<div class='published'>Read "
 		  (mapconcat (lambda (date)
