@@ -894,23 +894,27 @@ for instance, being notified when they publish a new book."
   "Search for missing books by the author under point."
   (interactive)
   (let ((author (plist-get (vtable-current-object) :author)))
-    (bookiez-search-author
-     author
-     (concat
-      "\n\nDo not include books from this list: \n\n"
-      (string-join
-       (cl-loop for book in bookiez-books
-		when (member author
-			     (split-string (plist-get book :author) ", "))
-		collect (format "Do not include %s"
-				(replace-regexp-in-string
-				 " (.*)\\'" "" (plist-get book :title))))
-       "\n ")
-      ;; Apparently, something like this is needed to make it shut up
-      ;; about what it's excluding.
-      "\n\n That is, if a book appeared on the preceding list, do not "
-      "include that in your output.  You do not need to mention that "
-      "you've excluded these books. \n\nThe titles above may be approximate -- don't include books that have very similar-sounding names, either. "))))
+    (cl-destructuring-bind (data comments)
+      (bookiez-query-assistant-author
+       author
+       (concat
+	"\n\nDo not include books from this list: \n\n"
+	(string-join
+	 (cl-loop for book in bookiez-books
+		  when (member author
+			       (split-string (plist-get book :author) ", "))
+		  collect (format "Do not include \"%s\". "
+				  (replace-regexp-in-string
+				   " (.*)\\'" "" (plist-get book :title))))
+	 "\n ")
+	;; Apparently, something like this is needed to make it shut up
+	;; about what it's excluding.
+	"\n\n That is, if a book appeared on the preceding list, do not "
+	"include that in your output.  You do not need to mention that "
+	"you've excluded these books. \n\nThe titles above may be approximate -- don't include books that have very similar-sounding names, either.  After excluding books from the list, very few (or even no) books may remain, and that's fine.  You do not need to mention anything about your reasoning process.  "))
+      (unless data
+	(error "No data for %s" author))
+      (bookiez--search-author-render data comments))))
 
 (defun bookiez-list (&optional selector)
   "List all the books."
@@ -1207,7 +1211,7 @@ for instance, being notified when they publish a new book."
 		       "all books published by the following authors: "
 		       (string-join author ", ")
 		       ". ")
-	     (concat "List all books published by " author
+	     (concat "List all books (except the ones listed below) published by " author
 		     " in chronological order.  "))
 	   "For each book, include (in this order) "
 	   "the author name, the book name, the publication year, "
