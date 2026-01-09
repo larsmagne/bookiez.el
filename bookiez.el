@@ -914,7 +914,29 @@ for instance, being notified when they publish a new book."
 	"you've excluded these books. \n\nThe titles above may be approximate -- don't include books that have very similar-sounding names, either.  After excluding books from the list, very few (or even no) books may remain, and that's fine.  You do not need to mention anything about your reasoning process.  "))
       (unless data
 	(error "No data for %s" author))
+      (let ((books (cl-loop for book in bookiez-books
+			    when (equal (plist-get book :author) author)
+			    collect book)))
+	;; The LLMs will return data containing the books we asked
+	;; them to exclude, anyway, so do some filtering.
+	(setq data
+	      (cl-loop
+	       for elem in data
+	       for title = (bookiez--title-normalize (cadr elem))
+	       unless (cl-loop for book in books
+			       for tit = (bookiez--title-normalize
+					  (plist-get book :title))
+			       for len = (min (length tit) (length title))
+			       when (or
+				     (equal title tit)
+				     (equal (substring title 0 len)
+					    (substring tit 0 len)))
+			       return t)
+	       collect elem)))
       (bookiez--search-author-render data comments))))
+
+(defun bookiez--title-normalize (title)
+  (downcase (replace-regexp-in-string "\\`\\(the \\|a \\|an \\)" "" title)))
 
 (defun bookiez-list (&optional selector)
   "List all the books."
