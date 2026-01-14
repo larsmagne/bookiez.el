@@ -852,7 +852,8 @@ for instance, being notified when they publish a new book."
 		(:name "Published" :primary t :width 5)
 		(:name "Bought" :width 5)
 		(:name "Read" :min-width 12)
-		(:name "Title" :min-width 80))
+		(:name "Title" :min-width 40)
+		(:name "Series" :min-width 40))
      :objects-function (lambda ()
 			 (bookiez--author-books author))
      :getter #'bookiez--get-book-data
@@ -955,7 +956,8 @@ for instance, being notified when they publish a new book."
 		(:name "Status")
 		(:name "Read" :min-width 12)
 		(:name "Author" :max-width 25)
-		(:name "Title"))
+		(:name "Title" :max-width 40)
+		(:name "Series" :max-width 30))
      :objects-function (or selector (lambda () bookiez-books))
      :getter #'bookiez--get-book-data
      :formatter #'bookiez--formatter
@@ -1028,6 +1030,8 @@ for instance, being notified when they publish a new book."
      (plist-get book :author))
     ("Title"
      (plist-get book :title))
+    ("Series"
+     (or (plist-get book :series) ""))
     ("Year"
      (plist-get book :year))
     ("Type"
