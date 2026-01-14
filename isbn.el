@@ -16,8 +16,8 @@
 ;; OpenLibrary.  Some of the methods requires getting a developer key.
 
 ;; Usage:
-;; (isbn-lookup "1931520003")
-;; => ("Stranger Things Happen (Stories)" "Kelly Link" "2001-07-01" "http://bks7.books.google.com/books?id=55lkEsblJ1gC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api")
+;; (isbn-find "1931520003")
+;; => (:title "Stranger Things Happen" :author "Kelly Link" :date "2001-07-01" :thumbnail "https://m.media-amazon.com/images/S/compressed.photo.goodreads.com/books/1508337515i/66659.jpg" :genres ("Fantasy" "Horror" "Magical Realism" "Ebooks" "Science Fiction"))
 
 ;;; Code:
 
@@ -49,9 +49,7 @@ the list.")
 
 ;; General interface.
 
-(defun isbn-lookup (isbn &optional all-results)
-  "Return a list of author/title/year/thumbnail for ISBN.
-If ALL-RESULTS, return the results from all providors."
+(defun isbn-find (isbn &optional all-results)
   (let ((result (make-vector (length isbn-lookup-types) nil))
 	(index 0))
     ;; The idea here is that we ask all the different APIs in
@@ -70,6 +68,21 @@ If ALL-RESULTS, return the results from all providors."
     (if all-results
 	(mapcar #'cdr result)
       (isbn-first-result result))))
+
+;; Legacy compatibility function.
+(defun isbn-lookup (isbn &optional all-results)
+  "Return a list of author/title/year/thumbnail for ISBN.
+If ALL-RESULTS, return the results from all providors."
+  (let ((result (isbn-find isbn all-results)))
+    (if all-results
+	(mapcar #'isbn--convert-to-old result)
+      (isbn--convert-to-old result))))
+
+(defun isbn--convert-to-old (result)
+  (list (plist-get result :title)
+	(plist-get result :author)
+	(plist-get result :date)
+	(plist-get result :thumbnail)))
 
 (defun isbn-format (isbn)
   (cond
@@ -104,10 +117,11 @@ If ALL-RESULTS, return the results from all providors."
 		  when (cdr elem)
 		  return (cdr elem))))
     ;; Extend with genres from Goodreads, if any.
-    (cl-loop for elem across result
-	     when (nth 6 elem)
-	     return (nconc first (list nil (nth 6 elem))))
-    first))
+    (or
+     (cl-loop for elem across result
+	      when (plist-get elem :genres)
+	      return (append first (list :genres (plist-get elem :genres))))
+     first)))
 
 (defun isbn-first-living-buffer (result)
   (cl-loop for elem across result
@@ -198,12 +212,13 @@ If ALL-RESULTS, return the results from all providors."
 		     (thumbnail
 		      (cdr (assq 'thumbnail
 				 (cdr (assq 'imageLinks volume))))))
-		 (when (assq 'subtitle volume)
-		   (setq title (concat title " ("
-				       (cdr (assq 'subtitle volume)) ")")))
 		 (when (and title author)
 		   (setcdr (aref vector index)
-			   (list title author date thumbnail)))))
+			   (list :title title
+				 :author author
+				 :date date
+				 :thumbnail thumbnail
+				 :series (cdr (assq 'subtitle volume)))))))
       (kill-buffer (current-buffer)))))
 
 ;;; OpenLibrary API
@@ -241,7 +256,10 @@ If ALL-RESULTS, return the results from all providors."
 				   (cdr (assq 'cover data)))))
 	(when (and title author)
 	  (setcdr (aref vector index)
-		  (list title author date thumbnail))))))
+		  (list :title title
+			:author author
+			:date date
+			:thumbnail thumbnail))))))
   (kill-buffer (current-buffer)))
 
 (defun isbn-search-openlibrary (author)
@@ -273,14 +291,15 @@ If ALL-RESULTS, return the results from all providors."
 		(when-let* ((json (json-parse-buffer))
 			    (book (gethash "book" json)))
 		  (setcdr (aref vector index)
-			  (list (string-join
+			  (list :author
+				(string-join
 				 (cl-loop for author across
 					  (gethash "authors" book)
 					  collect author)
 				 ", ")
-				(gethash "title" book)
-				(gethash "date_published" book)
-				(gethash "image" book)))))
+				:title (gethash "title" book)
+				:date (gethash "date_published" book)
+				:thumbnail (gethash "image" book)))))
 	 (kill-buffer (current-buffer)))))))
 
 (defun isbn-author-isbndb (author)
@@ -317,11 +336,14 @@ If ALL-RESULTS, return the results from all providors."
 	      (setcdr
 	       (aref vector index)
 	       (list
+		:title
 		(string-clean-whitespace
 		 (isbn--decode-html-entities (gethash "name" json)))
+		:author
 		(string-clean-whitespace
 		 (isbn--decode-html-entities
 		  (gethash "name" (elt (gethash "author" json) 0))))
+		:date
 		(cl-loop for p in (dom-by-tag dom 'p)
 			 when (equal (dom-attr p 'data-testid)
 				     "publicationInfo")
@@ -330,9 +352,9 @@ If ALL-RESULTS, return the results from all providors."
 			  "%Y-%m-%d" (encode-time
 				      (decoded-time-set-defaults
 				       (parse-time-string (dom-text p))))))
+		:thumbnail
 		(gethash "image" json)
-		;; Also add an extra slot for genres.
-		nil ;; ISBN in the Google result?
+		:genres
 		(cl-loop for span in
 			 (dom-by-class
 			  dom "BookPageMetadataSection__genreButton")

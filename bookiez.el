@@ -129,15 +129,20 @@ This is not used any more.")
    (format "https://www.goodreads.com/search?q=%s" bookiez-book-isbn)))
 
 (defun bookiez--isbn-lookup (isbn)
-  (when-let ((data (isbn-lookup isbn)))
-    (list :author (nth 1 data)
-	  :title (nth 0 data)
-	  :isbn isbn
-	  :published-date (nth 2 data)
-	  :cover-url (nth 3 data)
-	  :format "paper"
-	  :status "unread"
-	  :genres (cl-coerce (seq-take (nth 5 data) 2) 'vector))))
+  (when-let ((data (isbn-find isbn)))
+    (let ((book
+	   (list :author (plist-get data :author)
+		 :title (plist-get data :title)
+		 :isbn isbn
+		 :published-date (plist-get data :date)
+		 :cover-url (plist-get data :thumbnail)
+		 :format "paper"
+		 :status "unread"
+		 :genres (cl-coerce (seq-take (plist-get data :genres) 2)
+				    'vector))))
+      (when (plist-get data :series)
+	(bookiez-set book :series (plist-get data :series)))
+      book)))
 
 (defun bookiez-find-isbn ()
   "Find the correct ISBN for the current book."
@@ -1180,11 +1185,11 @@ for instance, being notified when they publish a new book."
 	     when (isbn-valid-p isbn)
 	     do
 	     (message "Querying %s" (plist-get book :title))
-	     (when-let ((data (isbn-lookup isbn)))
-	       (when (nth 2 data)
-		 (bookiez-set book :published-date (nth 2 data))
+	     (when-let ((data (isbn-find isbn)))
+	       (when (plist-get data :date)
+		 (bookiez-set book :published-date (plist-get data :date))
 		 (message "Date for %s is %s" (plist-get book :title)
-			  (plist-get book :isbn))))
+			  (plist-get book :date))))
 	     (sleep-for 2)))
   (bookiez-write-database))
 
@@ -1198,14 +1203,14 @@ for instance, being notified when they publish a new book."
 	     when (isbn-valid-p isbn)
 	     do
 	     (message "Querying %d %s" i (plist-get book :title))
-	     (when-let ((data (isbn-lookup isbn)))
+	     (when-let ((data (isbn-find isbn)))
 	       (setf (gethash isbn bookiez-goodreads-data) data))
 	     (sleep-for 2))))
 
 (defun bookiez--lookup-goodreads-genres (isbn)
   (let ((isbn-lookup-types '(goodreads)))
-    (when-let ((data (isbn-lookup isbn)))
-      (nth 4 data))))
+    (when-let ((data (isbn-find isbn)))
+      (plist-get data :genres))))
 
 (defun bookiez-get-goodreads-genres ()
   (cl-loop for i from 1
