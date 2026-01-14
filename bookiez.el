@@ -40,7 +40,7 @@
 (defvar bookiez-last-isbn nil)
 (defvar bookiez-books nil)
 
-(defvar bookiez-assistant 'openai
+(defvar bookiez-assistant 'claude
   "What assistant to use.")
 
 (defvar bookiez-barcode-device nil
@@ -168,7 +168,10 @@ This is not used any more.")
 	(bookiez-book-mode)
 	(setq-local bookiez-book-isbn (plist-get book :isbn))
 	(insert (plist-get book :author) "\n"
-		(plist-get book :title) "\n\n")
+		(plist-get book :title) "\n")
+	(when (plist-get book :series)
+	  (insert "(" (plist-get book :series) ")\n"))
+	(insert "\n")
 	(insert "Status " (plist-get book :status) "\n")
 	(unless (equal (plist-get book :format) "paper")
 	  (insert "Format " (plist-get book :format) "\n"))
@@ -1874,6 +1877,8 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	  ", ")
 	 "</div>")
 	(insert "<div class='title'>" (plist-get book :title) "</div>")
+	(when (plist-get book :series)
+	  (insert "<div class='series'>(" (plist-get book :series) ")</div>"))
 		
 	(insert "<div class='status'>Status <span class='status'>"
 		(plist-get book :status) "</span></div>")
@@ -1996,5 +2001,14 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	       (plist-get book :title)
 	       (plist-get book :isbn)))
       (setf (gethash (plist-get book :isbn) table) t))))
+
+(defun bookiez--convert-to-series ()
+  (dolist (book bookiez-books)
+    (let ((title (plist-get book :title)))
+      (when (string-match "\\(.*\\) (\\(.*\\))$" title)
+	(let ((series (match-string 2 title))
+	      (actual-title (match-string 1 title)))
+	  (bookiez-set book :title actual-title)
+	  (bookiez-set book :series series))))))
 
 (provide 'bookiez)

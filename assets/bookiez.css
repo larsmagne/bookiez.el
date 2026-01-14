@@ -133,6 +133,11 @@ div.author, div.title {
   font-weight: bold;
 }
 
+div.series {
+  font-weight: bold;
+  font-size: small;
+}
+
 div.links {
   padding-top: 20px;
 }
