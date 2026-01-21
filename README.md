@@ -1,3 +1,6 @@
+Bookiez
+=======
+
 bookiez is an Emacs package for keeping track of books you own.  The
 basic idea is that you enter ISBNs, and then bookiez queries various
 ISBN lookup providers, and then stores the information.
@@ -101,6 +104,12 @@ It can also be convenient to have your Emacs respond to a barcode
 scanner no matter which window has focus -- that way you can just grab
 the scanner after buying some new books without futzing around at all.
 But this requires some setup.
+
+You need this package from Microsoft Github:
+
+https://github.com/larsmagne/libinput.el
+
+And then:
 
 	apt install libinput-tools
 	adduser `whoami` input

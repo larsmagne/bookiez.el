@@ -27,7 +27,6 @@
 (require 'iso8601)
 (require 'query-assistant)
 (require 'multisession)
-(require 'libinput)
 (require 'find-func)
 (require 'format-spec)
 
@@ -1397,6 +1396,8 @@ for instance, being notified when they publish a new book."
    (format "https://www.biblio.com/search.php?stage=1&author=%s&title=%s"
 	   (plist-get (vtable-current-object) :author)
 	   (plist-get (vtable-current-object) :title))))
+
+(autoload 'libinput-grab "libinput")
 
 (defun bookiez--start-libinput ()
   (libinput-grab #'bookiez--handle-libinput bookiez-barcode-device))
