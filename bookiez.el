@@ -772,6 +772,7 @@ for instance, being notified when they publish a new book."
   "E" #'bookiez-export-html
   "A" #'bookiez-author-display-author
   "&" #'bookiez-author-goodreads
+  "t" #'bookiez-author-capitalize-title
   "c" #'bookiez-author-edit-book
   "C" #'bookiez-author-edit-all-data
   "R" #'bookiez-mark-as-reading
@@ -1071,6 +1072,32 @@ for instance, being notified when they publish a new book."
     (bookiez-set book :title title)
     (bookiez-write-database)
     (bookiez-refresh-buffer)))
+
+(defun bookiez-author-capitalize-title ()
+  "Capitalize the title under point."
+  (interactive)
+  (let* ((book (vtable-current-object)))
+    (bookiez-set book :title (bookiez--capitalize (plist-get book :title)))
+    (bookiez-write-database)
+    (bookiez-refresh-buffer)))
+
+(defvar bookiez--short-words
+  '("a" "an" "the" "and" "or" "nor" "for" "but" "so" "yet"
+    "to" "of" "by" "at" "for" "but" "in" "with" "has" "de" "von"
+    "vs" "vs." "is" "on")
+  "Words to downcase in titles.")
+
+(defun bookiez--capitalize (string)
+  (let ((words (split-string string nil t)))
+    (with-syntax-table text-mode-syntax-table
+      (string-join
+       (cons
+	(capitalize (car words))
+	(cl-loop for word in (cdr words)
+		 collect (if (member (downcase word) bookiez--short-words)
+			     (downcase word)
+			   (capitalize word))))
+       " "))))
 
 (defun bookiez-author-edit-all-data ()
   "Edit all the data of the book under point."
