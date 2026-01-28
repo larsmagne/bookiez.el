@@ -541,7 +541,7 @@ This is not used any more.")
   (interactive)
   (bookiez-mark-as-read nil "skipped"))
 
-(defun bookiez-mark-as-reading ()
+(defun bookiez-mark-as-ongoing ()
   "Mark the book under point as being in the process of being read."
   (interactive)
   (let ((book (vtable-current-object)))
@@ -551,6 +551,24 @@ This is not used any more.")
 		   (seq-concatenate 'vector (plist-get book :started-dates)
 				    (vector (format-time-string "%Y-%m-%d")))))
   (bookiez-mark-as-read t "reading"))
+
+(defun bookiez-jump-to-ongoing ()
+  "Jump to the book being read.
+If there are several, go to the first one."
+  (interactive)
+  (let ((start (point))
+	(found nil)
+	book)
+    (goto-char (point-min))
+    (while (and (setq book (vtable-current-object))
+		(not found))
+      (if (equal (plist-get book :status) "reading")
+	  (setq found t)
+	(forward-line 1)))
+    (if found
+	(push-mark start)
+      (message "No book marked as being read")
+      (goto-char start))))
 
 (defun bookiez-mark-as-wishlist ()
   "Mark the book under point as a wishlist item.
@@ -775,7 +793,8 @@ for instance, being notified when they publish a new book."
   "t" #'bookiez-author-capitalize-title
   "c" #'bookiez-author-edit-book
   "C" #'bookiez-author-edit-all-data
-  "R" #'bookiez-mark-as-reading
+  "o" #'bookiez-mark-as-ongoing
+  "O" #'bookiez-jump-to-ongoing
   "r" #'bookiez-mark-as-read
   "u" #'bookiez-mark-as-unread
   "k" #'bookiez-mark-as-skipped
