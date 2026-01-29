@@ -1090,7 +1090,9 @@ for instance, being notified when they publish a new book."
     (bookiez-set book :author author)
     (bookiez-set book :title title)
     (bookiez-write-database)
-    (vtable-update-object (vtable-current-table) book book)))
+    (let ((column (vtable-current-column)))
+      (vtable-update-object (vtable-current-table) book book)
+      (vtable-goto-column column))))
 
 (defun bookiez-author-capitalize-title ()
   "Capitalize the title under point."
@@ -1098,12 +1100,14 @@ for instance, being notified when they publish a new book."
   (let* ((book (vtable-current-object)))
     (bookiez-set book :title (bookiez--capitalize (plist-get book :title)))
     (bookiez-write-database)
-    (vtable-update-object (vtable-current-table) book book)))
+    (let ((column (vtable-current-column)))
+      (vtable-update-object (vtable-current-table) book book)
+      (vtable-goto-column column))))
 
 (defvar bookiez--short-words
   '("a" "an" "the" "and" "or" "nor" "for" "but" "so" "yet"
     "to" "of" "by" "at" "for" "but" "in" "with" "has" "de" "von"
-    "vs" "vs." "is" "on")
+    "vs" "vs." "is" "on" "from")
   "Words to downcase in titles.")
 
 (defun bookiez--capitalize (string)
@@ -1113,7 +1117,9 @@ for instance, being notified when they publish a new book."
        (cons
 	(capitalize (car words))
 	(cl-loop for word in (cdr words)
-		 collect (if (member (downcase word) bookiez--short-words)
+		 for last = (car (last words))
+		 collect (if (and (member (downcase word) bookiez--short-words)
+				  (not (eq word last)))
 			     (downcase word)
 			   (capitalize word))))
        " "))))
