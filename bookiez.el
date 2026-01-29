@@ -1090,9 +1090,7 @@ for instance, being notified when they publish a new book."
     (bookiez-set book :author author)
     (bookiez-set book :title title)
     (bookiez-write-database)
-    (let ((column (vtable-current-column)))
-      (vtable-update-object (vtable-current-table) book book)
-      (vtable-goto-column column))))
+    (bookiez--update-line book)))
 
 (defun bookiez-author-capitalize-title ()
   "Capitalize the title under point."
@@ -1100,9 +1098,12 @@ for instance, being notified when they publish a new book."
   (let* ((book (vtable-current-object)))
     (bookiez-set book :title (bookiez--capitalize (plist-get book :title)))
     (bookiez-write-database)
-    (let ((column (vtable-current-column)))
-      (vtable-update-object (vtable-current-table) book book)
-      (vtable-goto-column column))))
+    (bookiez--update-line book)))
+
+(defun bookiez--update-line (book)
+  (let ((column (vtable-current-column)))
+    (vtable-update-object (vtable-current-table) book book)
+    (vtable-goto-column column)))
 
 (defvar bookiez--short-words
   '("a" "an" "the" "and" "or" "nor" "for" "but" "so" "yet"
