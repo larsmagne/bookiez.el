@@ -1691,26 +1691,39 @@ It will be written to `bookiez-export-html-directory'.  Also see
 `bookiez-export-html-command'."
   (interactive)
   (bookiez--possibly-read-database)
-  (let ((dir bookiez-export-html-directory))
+  (let ((dir bookiez-export-html-directory)
+	(exported-files '("bookiez.css" "shelf.webp" "shelf-2x.webp")))
     (message "Exporting to %s ..." dir)
     (unless (file-exists-p dir)
       (make-directory dir))
-    (dolist (file '("bookiez.css" "shelf.webp" "shelf-2x.webp"))
+    (dolist (file exported-files)
       (let ((orig (concat (file-name-directory (find-library-name "bookiez.el"))
 			  "assets/" file))
 	    (dest (expand-file-name file dir)))
 	(when (or (not (file-exists-p dest))
 		  (file-newer-than-file-p orig dest))
 	  (copy-file orig dest t t))))
-    (bookiez--generate-html-genres)
-    (bookiez--export-html-overview)
-    (bookiez--export-html-isbns)
+    (setq exported-files
+	  (append exported-files
+		  (bookiez--generate-html-genres)
+		  (bookiez--export-html-overview)
+		  (bookiez--export-html-authors)
+		  (bookiez--export-html-isbns)
+		  (bookiez--export-html-images)))
+    (bookiez--export-html-delete-obsolete-files exported-files)
     (message "Exporting...done to %s" bookiez-export-html-directory)
     (when bookiez-export-html-command
       (message "Deploying %s..." bookiez-export-html-command)
       (shell-command (format-spec bookiez-export-html-command
 				  `((?d . ,bookiez-export-html-directory)))))
     (run-hooks 'bookiez-export-html-hook)))
+
+(defun bookiez--export-html-delete-obsolete-files (exported-files)
+  (cl-loop for file in (directory-files bookiez-export-html-directory)
+	   for full = (expand-file-name file bookiez-export-html-directory)
+	   when (and (not (member file exported-files))
+		     (not (file-directory-p full)))
+	   do (delete-file full)))
 
 (defmacro bookiez--html (class title file-name &rest body)
   (declare (debug t) (indent 3))
@@ -1739,7 +1752,8 @@ It will be written to `bookiez-export-html-directory'.  Also see
 			       (with-temp-buffer
 				 (insert-file-contents file)
 				 (buffer-hash)))))
-	   (write-region (point-min) (point-max) file nil 'silent))))))
+	   (write-region (point-min) (point-max) file nil 'silent))
+	 (file-name-nondirectory file)))))
 
 (defun bookiez--author-sort-key (author)
   (string-join (reverse (cl-loop with name = (split-string author)
@@ -1785,63 +1799,69 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (setf (gethash type bookiez--random) result)
     result))
 
+(defun bookiez--export-html-authors ()
+  (cl-loop for (_ _ author)
+	   in (bookiez--overview-entries
+	       (bookiez--filter-export bookiez-books))
+	   collect (bookiez--export-html-author author)))
+
 (defun bookiez--export-html-overview ()
-  (bookiez--html "authors" "Authors" "authors"
-    (insert
-     "<tr><th class='count'>Books<th class='author'>Author<th class='covers'>Covers</tr>")
-    (cl-loop for elem in (bookiez--overview-entries
-			  (bookiez--filter-export bookiez-books))
-	     do (insert
-		 (format
-		  "<tr><td class='count'>%s<td class='author'><a href='author-%s.html'>%s</a>"
-		  (nth 1 elem)
-		  (bookiez--file-name (nth 2 elem))
-		  (nth 2 elem)))
-	     (insert
-	      (format
-	       "<td class='covers' style='background: image-set(url(shelf.webp) 1x, url(shelf-2x.webp) 2x) %spx;'>"
-	       (bookiez--random 780 100 :shift)))
-	     (let ((covers
-		    (cl-loop for book in (bookiez--author-books (nth 2 elem))
-			     for imgs = (bookiez--html-img-file book t)
-			     when imgs
-			     ;; We're using lazy loading of the covers on the
-			     ;; overview page, because otherwise the initial
-			     ;; download will be very big.
-			     collect
-			     (format
-			      "<a href='isbn-%s.html'><img loading='lazy' class='cover' src='%s' srcset='%s' %s></a>"
-			      (bookiez--file-name
-			       (plist-get book :isbn))
-			      (file-name-nondirectory (car imgs))
-			      (string-join
-			       (cl-loop for img in imgs
-					for i from 1
-					collect (format
-						 "%s %dx"
-						 (file-name-nondirectory img)
-						 i))
-			       ", ")
-			      (bookiez--img-dimensions (car imgs))))))
-	       (cond
-		((not covers)
-		 (insert "<div class='no-image'>&nbsp;</div>"))
-		((> (length covers) 6)
-		 (mapc #'insert covers))
-		(t
-		 (let ((before (bookiez--random 6 0 :space)))
-		   (cl-loop for i from 0 upto before
-			    do (insert
-				(format
-				 "<span class='space-image space-image-%d'></span>"
-				 i)))
-		   (mapc #'insert covers)
-		   (cl-loop for i from before upto (- 6 before)
-			    do (insert
-				(format
-				 "<span class='space-image space-image-%d'></span>"
-				 i)))))))
-	     (bookiez--export-html-author (nth 2 elem)))))
+  (list
+   (bookiez--html "authors" "Authors" "authors"
+     (insert
+      "<tr><th class='count'>Books<th class='author'>Author<th class='covers'>Covers</tr>")
+     (cl-loop for elem in (bookiez--overview-entries
+			   (bookiez--filter-export bookiez-books))
+	      do (insert
+		  (format
+		   "<tr><td class='count'>%s<td class='author'><a href='author-%s.html'>%s</a>"
+		   (nth 1 elem)
+		   (bookiez--file-name (nth 2 elem))
+		   (nth 2 elem)))
+	      (insert
+	       (format
+		"<td class='covers' style='background: image-set(url(shelf.webp) 1x, url(shelf-2x.webp) 2x) %spx;'>"
+		(bookiez--random 780 100 :shift)))
+	      (let ((covers
+		     (cl-loop for book in (bookiez--author-books (nth 2 elem))
+			      for imgs = (bookiez--html-img-file book t)
+			      when imgs
+			      ;; We're using lazy loading of the covers on the
+			      ;; overview page, because otherwise the initial
+			      ;; download will be very big.
+			      collect
+			      (format
+			       "<a href='isbn-%s.html'><img loading='lazy' class='cover' src='%s' srcset='%s' %s></a>"
+			       (bookiez--file-name
+				(plist-get book :isbn))
+			       (file-name-nondirectory (car imgs))
+			       (string-join
+				(cl-loop for img in imgs
+					 for i from 1
+					 collect (format
+						  "%s %dx"
+						  (file-name-nondirectory img)
+						  i))
+				", ")
+			       (bookiez--img-dimensions (car imgs))))))
+		(cond
+		 ((not covers)
+		  (insert "<div class='no-image'>&nbsp;</div>"))
+		 ((> (length covers) 6)
+		  (mapc #'insert covers))
+		 (t
+		  (let ((before (bookiez--random 6 0 :space)))
+		    (cl-loop for i from 0 upto before
+			     do (insert
+				 (format
+				  "<span class='space-image space-image-%d'></span>"
+				  i)))
+		    (mapc #'insert covers)
+		    (cl-loop for i from before upto (- 6 before)
+			     do (insert
+				 (format
+				  "<span class='space-image space-image-%d'></span>"
+				  i)))))))))))
 
 (defun bookiez--file-name (name)
   (replace-regexp-in-string "[^-0-9a-zA-Z]" "_" name))
@@ -1925,79 +1945,88 @@ It will be written to `bookiez-export-html-directory'.  Also see
     (bookiez--export-html-books
      (bookiez--filter-export (bookiez--genre-books genre)))))
 
+(defun bookiez--export-html-images ()
+  (cl-loop
+   for book in (bookiez--filter-export bookiez-books)
+   for img = (bookiez--html-img-file book)
+   when img
+   append (mapcar #'file-name-nondirectory
+		  (cons img (bookiez--html-img-file book t)))))
+
 (defun bookiez--export-html-isbns ()
   (cl-loop
-   for book in bookiez-books
-   do (bookiez--html "book" (plist-get book :title)
-		     (concat "isbn-" (plist-get book :isbn))
-	(insert
-	 "<div class='author'>"
-	 (mapconcat
-	  (lambda (author)
-	    (format "<a href='author-%s.html'>%s</a>"
-		    (bookiez--file-name author) author))
-	  (split-string (plist-get book :author) ", ")
-	  ", ")
-	 "</div>")
-	(insert "<div class='title'>" (plist-get book :title) "</div>")
-	(when (plist-get book :series)
-	  (insert "<div class='series'>(" (plist-get book :series) ")</div>"))
+   for book in (bookiez--filter-export bookiez-books)
+   collect
+   (bookiez--html "book" (plist-get book :title)
+		  (concat "isbn-" (plist-get book :isbn))
+     (insert
+      "<div class='author'>"
+      (mapconcat
+       (lambda (author)
+	 (format "<a href='author-%s.html'>%s</a>"
+		 (bookiez--file-name author) author))
+       (split-string (plist-get book :author) ", ")
+       ", ")
+      "</div>")
+     (insert "<div class='title'>" (plist-get book :title) "</div>")
+     (when (plist-get book :series)
+       (insert "<div class='series'>(" (plist-get book :series) ")</div>"))
 		
-	(insert "<div class='status'>Status <span class='status'>"
-		(plist-get book :status) "</span></div>")
-	(unless (equal (plist-get book :format) "paper")
-	  (insert "<div class='format'>Format <span class='format'>"
-		  (plist-get book :format) "</span></div>"))
-	;; Don't output this placeholder date.
-	(when (plist-get book :published-date)
-	  (insert "<div class='published'>Published <span class='date'>"
-		  (bookiez--format-date (plist-get book :published-date) t)
-		  "</span></div>"))
-	(when (cl-plusp (length (plist-get book :bought-date)))
-	  (insert "<div class='bought'>Bought <span class='date'>"
-		  (bookiez--format-date (plist-get book :bought-date))
-		  "</span></div>"))
-	(when (plist-get book :started-dates)
-	  (insert "<div class='published'>Started reading "
-		  (mapconcat (lambda (date)
-			       (concat "<span class='date'>"
-				       (bookiez--format-date date)
-				       "</span>"))
-			     (plist-get book :started-dates) ", ")
-		  "</div>"))
-	(when (plist-get book :read-dates)
-	  (insert "<div class='published'>Read "
-		  (mapconcat (lambda (date)
-			       (concat "<span class='date'>"
-				       (bookiez--format-date date)
-				       "</span>"))
-			     (plist-get book :read-dates) ", ")
-		  "</div>"))
-	(when (isbn-valid-p (plist-get book :isbn))
-	  (insert "<div class='isbn'>ISBN <span class='isbn'>"
-		  (isbn-format (plist-get book :isbn)) "</span></div>"))
-	(when (cl-plusp (length (plist-get book :genres)))
-	  (insert "<div class='genres'>"
-		  (mapconcat
-		   (lambda (genre)
-		     (concat "<span class='genre'><a href='genre-"
-			     (bookiez--file-name genre)
-			     ".html'>"
-			     genre "</a></span>"))
-		   (plist-get book :genres)
-		   ", ")
-		  "</div>"))
-	(when-let ((img (bookiez--html-img-file book)))
-	  (insert "<div class='cover-image'><img src='"
-		  (file-name-nondirectory img)
-		  "'></div>"))
-	(when (isbn-valid-p (plist-get book :isbn))
-	  (insert "<div class='links'>")
-	  (insert (format "<span class='goodreads'><a href='https://www.goodreads.com/search?q=%s'>Goodreads</a></span>, "
-			  (plist-get book :isbn)))
-	  (insert (format "<span class='goodreads'><a href='https://www.biblio.com/%s'>Biblio</a></span>"
-			  (plist-get book :isbn)))
-	  (insert "</div>")))))
+     (insert "<div class='status'>Status <span class='status'>"
+	     (plist-get book :status) "</span></div>")
+     (unless (equal (plist-get book :format) "paper")
+       (insert "<div class='format'>Format <span class='format'>"
+	       (plist-get book :format) "</span></div>"))
+     ;; Don't output this placeholder date.
+     (when (plist-get book :published-date)
+       (insert "<div class='published'>Published <span class='date'>"
+	       (bookiez--format-date (plist-get book :published-date) t)
+	       "</span></div>"))
+     (when (cl-plusp (length (plist-get book :bought-date)))
+       (insert "<div class='bought'>Bought <span class='date'>"
+	       (bookiez--format-date (plist-get book :bought-date))
+	       "</span></div>"))
+     (when (plist-get book :started-dates)
+       (insert "<div class='published'>Started reading "
+	       (mapconcat (lambda (date)
+			    (concat "<span class='date'>"
+				    (bookiez--format-date date)
+				    "</span>"))
+			  (plist-get book :started-dates) ", ")
+	       "</div>"))
+     (when (plist-get book :read-dates)
+       (insert "<div class='published'>Read "
+	       (mapconcat (lambda (date)
+			    (concat "<span class='date'>"
+				    (bookiez--format-date date)
+				    "</span>"))
+			  (plist-get book :read-dates) ", ")
+	       "</div>"))
+     (when (isbn-valid-p (plist-get book :isbn))
+       (insert "<div class='isbn'>ISBN <span class='isbn'>"
+	       (isbn-format (plist-get book :isbn)) "</span></div>"))
+     (when (cl-plusp (length (plist-get book :genres)))
+       (insert "<div class='genres'>"
+	       (mapconcat
+		(lambda (genre)
+		  (concat "<span class='genre'><a href='genre-"
+			  (bookiez--file-name genre)
+			  ".html'>"
+			  genre "</a></span>"))
+		(plist-get book :genres)
+		", ")
+	       "</div>"))
+     (when-let ((img (bookiez--html-img-file book)))
+       (insert "<div class='cover-image'><img src='"
+	       (file-name-nondirectory img)
+	       "'></div>"))
+     (when (isbn-valid-p (plist-get book :isbn))
+       (insert "<div class='links'>")
+       (insert (format "<span class='goodreads'><a href='https://www.goodreads.com/search?q=%s'>Goodreads</a></span>, "
+		       (plist-get book :isbn)))
+       (insert (format "<span class='goodreads'><a href='https://www.biblio.com/%s'>Biblio</a></span>"
+		       (plist-get book :isbn)))
+       (insert "</div>")))))
 
 (defun bookiez--html-img-file (book &optional return-small)
   (let ((file (bookiez--cache-file (plist-get book :isbn))))
@@ -2044,11 +2073,11 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	(if return-small smalls img)))))
 
 (defun bookiez--generate-html-genres ()
-  (dolist (genre (mapcar (lambda (elem) (plist-get elem :genre))
-			 (bookiez--genres)))
-    (bookiez--html "genre" genre (concat "genre-" genre)
-      (bookiez--export-html-books
-       (bookiez--filter-export (bookiez--genre-books genre))))))
+  (cl-loop for genre in (mapcar (lambda (elem) (plist-get elem :genre))
+				(bookiez--genres))
+	   collect (bookiez--html "genre" genre (concat "genre-" genre)
+		     (bookiez--export-html-books
+		      (bookiez--filter-export (bookiez--genre-books genre))))))
 
 (defun bookiez--clear-bought-date (date)
   (dolist (book bookiez-books)
