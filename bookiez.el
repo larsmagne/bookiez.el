@@ -251,6 +251,7 @@ This is not used any more.")
 (defun bookiez-query-jacket (&optional force)
   "Re-download the book jacket."
   (interactive "P" bookiez-book-mode)
+  (bookiez--possibly-read-database)
   (let ((book (bookiez-lookup bookiez-book-isbn)))
     (if (and (plist-get book :cover-url)
 	     force)
@@ -302,6 +303,7 @@ This is not used any more.")
 (defun bookiez-book-edit ()
   "Edit the book data in the current buffer."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((isbn bookiez-book-isbn))
     (cl-loop for book in bookiez-books
 	     when (equal isbn (plist-get book :isbn))
@@ -544,6 +546,7 @@ This is not used any more.")
 (defun bookiez-mark-as-ongoing ()
   "Mark the book under point as being in the process of being read."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     (unless book
       (error "No book on the current line"))
@@ -580,6 +583,7 @@ on getting."
 (defun bookiez-mark-as-bought ()
   "Mark the wishlist book under point as bought."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     (unless book
       (user-error "No book on the current line"))
@@ -593,6 +597,7 @@ on getting."
   "Mark the book under point as read.
 If given a prefix, don't mark it read on a specific date."
   (interactive "P")
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     (unless book
       (error "No book on the current line"))
@@ -609,6 +614,7 @@ If given a prefix, don't mark it read on a specific date."
 (defun bookiez-mark-as-unread ()
   "Mark the book under point as unread."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     (unless book
       (error "No book on the current line"))
@@ -622,6 +628,7 @@ If given a prefix, don't mark it read on a specific date."
 (defun bookiez-clear-bought-date ()
   "Clear the bought date from the book under point."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     (unless book
       (error "No book on the current line"))
@@ -633,6 +640,7 @@ If given a prefix, don't mark it read on a specific date."
 (defun bookiez-query-published-date ()
   "Query the published for the book under point."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     (unless book
       (error "No book on the current line"))
@@ -651,6 +659,7 @@ If given a prefix, don't mark it read on a specific date."
 (defun bookiez-mark-as-hidden ()
   "Mark the book under point as hidden."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     (unless book
       (error "No book on the current line"))
@@ -661,6 +670,7 @@ If given a prefix, don't mark it read on a specific date."
 (defun bookiez-delete-cover ()
   "Delete the cover of the book under point."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     (unless book
       (error "No book on the current line"))
@@ -759,6 +769,7 @@ for instance, being notified when they publish a new book."
   (interactive (list (nth 2 (vtable-current-object))
 		     (read-string "New name: "
 				  (nth 2 (vtable-current-object)))))
+  (bookiez--possibly-read-database)
   (cl-loop for book in bookiez-books
 	   for authors = (split-string (plist-get book :author) ", ")
 	   when (member name authors)
@@ -1084,6 +1095,7 @@ for instance, being notified when they publish a new book."
 (defun bookiez-author-edit-book ()
   "Edit the author/book name under point."
   (interactive)
+  (bookiez--possibly-read-database)
   (let* ((book (vtable-current-object))
 	 (author (read-string "New author name: " (plist-get book :author)))
 	 (title (read-string "New book title: " (plist-get book :title))))
@@ -1095,6 +1107,7 @@ for instance, being notified when they publish a new book."
 (defun bookiez-author-capitalize-title ()
   "Capitalize the title under point."
   (interactive)
+  (bookiez--possibly-read-database)
   (let* ((book (vtable-current-object)))
     (bookiez-set book :title (bookiez--capitalize (plist-get book :title)))
     (bookiez-write-database)
@@ -1128,6 +1141,7 @@ for instance, being notified when they publish a new book."
 (defun bookiez-author-edit-all-data ()
   "Edit all the data of the book under point."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     ;; First edit simple slots.
     (cl-loop for slot in '( :author :title :isbn :published-date :bought-date
@@ -1632,6 +1646,7 @@ and a book that's been successfully entered."
 (defun bookiez-edit-genres ()
   "Edit the genre(s) of the book under point."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object)))
     (bookiez-set
      book :genres
@@ -1652,6 +1667,7 @@ and a book that's been successfully entered."
 (defun bookiez-copy-previous-genres ()
   "Set the genres of the current book to a copy of the previous book's genres."
   (interactive)
+  (bookiez--possibly-read-database)
   (let ((book (vtable-current-object))
 	(previous (save-excursion
 		    (forward-line -1)
