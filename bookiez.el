@@ -1822,6 +1822,9 @@ It will be written to `bookiez-export-html-directory'.  Also see
 	   collect (bookiez--export-html-author author)))
 
 (defun bookiez--export-html-overview ()
+  ;; Have a contant seed so that we don't get different results with
+  ;; the same data.
+  (random (sha1 (format "%d" (length bookiez-books))))
   (list
    (bookiez--html "authors" "Authors" "authors"
      (insert
@@ -1877,7 +1880,9 @@ It will be written to `bookiez-export-html-directory'.  Also see
 			     do (insert
 				 (format
 				  "<span class='space-image space-image-%d'></span>"
-				  i)))))))))))
+				  i))))))))
+     ;; Reset the seed.
+     (random ""))))
 
 (defun bookiez--file-name (name)
   (replace-regexp-in-string "[^-0-9a-zA-Z]" "_" name))
