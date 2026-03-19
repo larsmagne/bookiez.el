@@ -1882,7 +1882,7 @@ It will be written to `bookiez-export-html-directory'.  Also see
 				  "<span class='space-image space-image-%d'></span>"
 				  i))))))))
      ;; Reset the seed.
-     (random ""))))
+     (random t))))
 
 (defun bookiez--file-name (name)
   (replace-regexp-in-string "[^-0-9a-zA-Z]" "_" name))
