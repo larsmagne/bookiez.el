@@ -430,7 +430,9 @@ This is not used any more.")
   ;; Convert the old database file to the new; if needed.
   (when (and (file-exists-p bookiez-file)
 	     (not (file-exists-p bookiez-data-file)))
-    (bookiez--write-data (bookiez-read-old-database)))
+    (setq bookiez-books (bookiez-read-old-database))
+    (setq bookiez-books (bookiez--convert-to-json))
+    (bookiez--write-data bookiez-books))
   ;; Then check whether to read the database file.
   (when (or (null bookiez-books)
 	    (null bookiez--database-timestamp)
