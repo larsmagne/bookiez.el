@@ -468,7 +468,7 @@ This is not used any more.")
   (switch-to-buffer "*Bookiez*")
   (bookiez-mode)
   (if (not bookiez-books)
-      (message "Empty database; add some books")
+      (message "Empty database; add some books with the `i' command")
     (bookiez-display-authors)))
 
 (defvar-keymap bookiez-mode-map
@@ -786,7 +786,7 @@ for instance, being notified when they publish a new book."
 
 (defun bookiez-add-isbn (isbn)
   "Add the book with ISBN to the database."
-  (interactive "sISBN: ")
+  (interactive "sISBN of book: ")
   ;; Allow people to paste in ISBNs that are formatted with dashes and
   ;; whatever, but clean out all non-ISBN characters.
   (setq isbn (replace-regexp-in-string "[^0-9X]" "" isbn))
