@@ -28,6 +28,7 @@
 (require 'time-date)
 (require 'sgml-mode)
 (require 'mm-url)
+(require 'fetch-dom)
 
 (defvar isbn-isbndb-key nil
   "To use the isbndb lookup, get an access key.")
@@ -398,16 +399,9 @@ If ALL-RESULTS, return the results from all providors."
 				 (gethash "image" json)))))))
 
 (defun isbn-search-goodreads-1 (string)
-  (let ((dom
-	 (with-current-buffer (url-retrieve-synchronously
-			       (format
-				"https://www.goodreads.com/search?q=%s&qid="
-				(browse-url-encode-url string)))
-	   (goto-char (point-min))
-	   (prog1
-	       (and (search-forward "\n\n" nil t)
-		    (libxml-parse-html-region (point) (point-max)))
-	     (kill-buffer (current-buffer))))))
+  (let ((dom (fetch-dom (format
+			 "https://www.goodreads.com/search?q=%s&qid="
+			 (browse-url-encode-url string)))))
     (cl-loop for book in (dom-by-tag dom 'tr)
 	     when (equal (dom-attr book 'itemtype) "http://schema.org/Book")
 	     collect (cl-loop for link in (dom-by-tag book 'a)
