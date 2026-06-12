@@ -41,6 +41,11 @@ If you wish to use ISBNDB, you need to get an API key from ISBNDB, and
 set `isbn-isbndb-key' to that key.  See
 https://isbndb.com/isbndb-api-documentation-v2.
 
+Requirements
+============
+
+https://github.com/larsmagne/fetch-dom.el
+
 Tracked Authors
 ===============
 
