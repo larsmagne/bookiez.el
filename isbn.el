@@ -197,7 +197,7 @@ If ALL-RESULTS, return the results from all providors."
 	      (goto-char (point-min))
 	      (setq json (cdr (assq 'items (json-read))))))
 	(setq json (cdr (assq 'items (json-read)))))
-      (cl-loop for data across (setq k json)
+      (cl-loop for data across json
 	       for volume = (assq 'volumeInfo data)
 	       for isbn = (cl-loop for entry across
 				   (cdr (assq 'industryIdentifiers volume))
@@ -384,19 +384,26 @@ If ALL-RESULTS, return the results from all providors."
 	   return data))
 
 (defun isbn-try-candidate (url)
-  (let ((dom
-	 (with-current-buffer (url-retrieve-synchronously url)
-	   (goto-char (point-min))
-	   (prog1
-	       (and (search-forward "\n\n" nil t)
-		    (libxml-parse-html-region (point) (point-max)))
-	     (kill-buffer (current-buffer))))))
-    (cl-loop for elem in (dom-by-tag dom 'script)
-	     when (equal (dom-attr elem 'type) "application/ld+json")
-	     return (let ((json (json-parse-string (dom-text elem))))
-		      (and (gethash "isbn" json)
-			   (list (gethash "isbn" json)
-				 (gethash "image" json)))))))
+  (cl-loop with dom = (fetch-dom url)
+	   for elem in (dom-by-tag dom 'script)
+	   when (equal (dom-attr elem 'type) "application/json")
+	   return (cl-loop for (_ value) on
+			   (plist-get
+			    (plist-get 
+			     (plist-get (json-parse-string (dom-text elem)
+							   :object-type 'plist)
+					:props)
+			     :pageProps)
+			    :apolloState)
+			   by #'cddr
+			   when (and (consp value)
+				     (equal (plist-get value :__typename)
+					    "Book"))
+			   return
+			   (let ((details (plist-get value :details)))
+			     (list (or (plist-get details :isbn13)
+				       (plist-get details :isbn))
+				   (plist-get value :imageUrl))))))
 
 (defun isbn-search-goodreads-1 (string)
   (let ((dom (fetch-dom (format
