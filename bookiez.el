@@ -559,17 +559,28 @@ This is not used any more.")
 
 (defun bookiez-jump-to-ongoing ()
   "Jump to the book being read.
-If there are several, go to the first one."
+If there are several, visit each one in turn."
   (interactive)
   (let ((start (point))
 	(found nil)
-	book)
-    (goto-char (point-min))
-    (while (and (setq book (vtable-current-object))
-		(not found))
-      (if (equal (plist-get book :status) "reading")
-	  (setq found t)
-	(forward-line 1)))
+	(book (vtable-current-object))
+	(next 2))
+    (if (and book
+	     (equal (plist-get book :status) "reading"))
+	;; We're on a "reading" book, so find the next one.
+	(forward-line 1)
+      ;; Otherwise, find the first one.
+      (goto-char (point-min)))
+    (while (and (not found)
+		(> next 0))
+      (while (and (setq book (vtable-current-object))
+		  (not found))
+	(if (equal (plist-get book :status) "reading")
+	    (setq found t)
+	  (forward-line 1)))
+      (when (not found)
+	(goto-char (point-min)))
+      (cl-decf next))
     (if found
 	(push-mark start)
       (message "No book marked as being read")
@@ -1887,7 +1898,10 @@ It will be written to `bookiez-export-html-directory'.  Also see
      (random t))))
 
 (defun bookiez--file-name (name)
-  (replace-regexp-in-string "[^-0-9a-zA-Z]" "_" name))
+  (replace-regexp-in-string "[^-0-9a-zA-Z]" "_"
+			    (if (stringp name)
+				name
+			      (format "%s" name))))
 
 (defun bookiez--export-html-author (author)
   (bookiez--html "author" author (concat "author-" author)
