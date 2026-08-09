@@ -561,10 +561,11 @@ This is not used any more.")
   "Jump to the book being read.
 If there are several, visit each one in turn."
   (interactive)
-  (let ((start (point))
-	(found nil)
-	(book (vtable-current-object))
-	(next 2))
+  (let* ((start (point))
+	 (found nil)
+	 (book (vtable-current-object))
+	 (start-book book)
+	 (next 2))
     (if (and book
 	     (equal (plist-get book :status) "reading"))
 	;; We're on a "reading" book, so find the next one.
@@ -582,7 +583,8 @@ If there are several, visit each one in turn."
 	(goto-char (point-min)))
       (cl-decf next))
     (if found
-	(push-mark start)
+	(unless (equal book start-book)
+	  (push-mark start))
       (message "No book marked as being read")
       (goto-char start))))
 
