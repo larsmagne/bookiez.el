@@ -131,21 +131,27 @@
    `(("x-api-key" . ,query-assistant-claude-key)
      ("anthropic-version" . "2023-06-01"))
    (query-assistant--hash
-    (list "model" "claude-sonnet-4-5")
-    (list "max_tokens" 1000)
+    (list "model" "claude-sonnet-5")
+    (list "max_tokens" 50000)
     (list "messages"
 	  (vector
 	   (query-assistant--hash
 	    (list "role" "user")
 	    (list "content" query)))))
    (lambda (message)
+     (setq lars-message message)
      (let ((error (gethash "error" message)))
-       (if error
-	   (error "Error: %s" (gethash "message" error))
+       (cond
+	(error
+	 (error "Error: %s" (gethash "message" error)))
+	((not (equal (gethash "stop_reason" message) "end_turn"))
+	 (error "Error: Stopped because of: %s "
+		(gethash "stop_reason" message)))
+	(t
 	 (cl-loop for elem across (gethash "content" message)
 		  for text = (gethash "text" elem)
 		  when text
-		  return text))))))
+		  return text)))))))
 
 (provide 'query-assistant)
 
