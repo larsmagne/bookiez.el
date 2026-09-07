@@ -139,7 +139,6 @@
 	    (list "role" "user")
 	    (list "content" query)))))
    (lambda (message)
-     (setq lars-message message)
      (let ((error (gethash "error" message)))
        (cond
 	(error
