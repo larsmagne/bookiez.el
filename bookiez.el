@@ -113,6 +113,7 @@ This is not used any more.")
   "j" #'bookiez-query-jacket
   "f" #'bookiez-find-isbn
   "c" #'bookiez-book-edit
+  "s" #'bookiez-scan-jacket
   "w" #'bookiez-book-jacket-file)
 
 (define-derived-mode bookiez-book-mode special-mode "Bookiez"
@@ -238,6 +239,15 @@ This is not used any more.")
   (interactive "fFile name of new book jacket: " bookiez-book-mode)
   (copy-file file (bookiez--cache-file bookiez-book-isbn) t)
   (clear-image-cache))
+
+(defun bookiez-scan-jacket ()
+  "Scan an image and use that as the cover of the book."
+  (interactive nil bookiez-book-mode)
+  (scan-single "/tmp/bookiez.jpg")
+  (copy-file "/tmp/bookiez.jpg" (bookiez--cache-file bookiez-book-isbn) t)
+  ;;(delete-file "/tmp/bookiez.jpg")
+  (clear-image-cache)
+  (bookiez-display-isbn-1 bookiez-book-isbn))
 
 (defun bookiez-book-jacket-file ()
   "Copy the file name of the jacket to the kill ring."
