@@ -362,7 +362,7 @@ This is not used any more.")
 (defun bookiez-add-book-manually (&optional format)
   (interactive)
   (let ((author (completing-read
-		 "Author: "
+		 (if (equal format "ebook") "Ebook author: " "Author: ")
 		 (bookiez--authors)
 		 nil nil nil 'bookiez-author-history))
 	(title (read-string "Title: "))
