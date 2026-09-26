@@ -234,7 +234,7 @@ If ALL-RESULTS, return the results from all providors."
 (defun isbn-parse-openlibrary (_status vector index _find-isbn)
   (goto-char (point-min))
   (when (search-forward "\n\n" nil t)
-    (let ((data (cdar (json-read)))
+    (let ((data (cdar (ignore-errors (json-read))))
 	  title author date thumbnail)
       (when data
 	(setq title (cdr (assq 'title data)))
