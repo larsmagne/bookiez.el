@@ -226,7 +226,7 @@ If ALL-RESULTS, return the results from all providors."
 
 (defun isbn-lookup-openlibrary (isbn vector index find-isbn)
   (url-retrieve
-   (format "http://openlibrary.org/api/books?bibkeys=ISBN:%s&format=json&jscmd=data"
+   (format "https://openlibrary.org/search.json?q=%s&fields=*,publish_date,cover_i"
 	   isbn)
    'isbn-parse-openlibrary
    (list vector index find-isbn) t))
@@ -234,33 +234,18 @@ If ALL-RESULTS, return the results from all providors."
 (defun isbn-parse-openlibrary (_status vector index _find-isbn)
   (goto-char (point-min))
   (when (search-forward "\n\n" nil t)
-    (let ((data (cdar (ignore-errors (json-read))))
-	  title author date thumbnail)
-      (when data
-	(setq title (cdr (assq 'title data)))
-	(when (cdr (assq 'authors data))
-	  (setq author (mapconcat
-			(lambda (elem)
-			  (cdr (assq 'name elem)))
-			(cdr (assq 'authors data))
-			", ")))
-	(setq date (format-time-string
-		    "%Y-%m-%d"
-		    (and (cdr (assq 'publish_date data))
-			 (apply 'encode-time
-				(mapcar
-				 (lambda (elem)
-				   (or elem 0))
-				 (parse-time-string
-				  (cdr (assq 'publish_date data)))))))
-	      thumbnail (cdr (assq 'large
-				   (cdr (assq 'cover data)))))
-	(when (and title author)
-	  (setcdr (aref vector index)
-		  (list :title title
-			:author author
-			:date date
-			:thumbnail thumbnail))))))
+    (when-let ((data (json-read)))
+      (let ((book (elt (cdr (assq 'docs data)) 0)))
+	(setcdr (aref vector index)
+		(list :title (cdr (assq 'title book))
+		      :author (string-join (cdr (assq 'author_name book))
+					   ", ")
+		      :date (format
+			     "%04d-01-01" (cdr (assq 'first_publish_year book)))
+		      :thumbnail
+		      (format
+		       "https://covers.openlibrary.org/b/olid/%s-L.jpg"
+		       (cdr (assq 'cover_edition_key book))))))))
   (kill-buffer (current-buffer)))
 
 (defun isbn-search-openlibrary (author)
